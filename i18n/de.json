@@ -1,25 +1,22 @@
 {
   "details": {
-    "added": "neues Paket",
     "all": "Alle ({count})",
-    "downgrade": "Downgrade",
+    "changes": "Änderungen",
     "flatpak": "Flatpak ({count})",
-    "info": "Details",
     "inputs": "Flake-Inputs ({count})",
     "installed": "Installiert",
-    "major": "Major-Update",
-    "minor": "Minor-Update",
+    "link_changelog": "Changelog",
+    "link_commits": "Commits vergleichen",
+    "link_flathub": "Release Notes auf Flathub",
+    "link_releases": "GitHub-Releases",
     "name": "Name",
     "new": "Neu",
+    "no_changelog": "Kein Changelog",
+    "no_compare": "Kein Vergleich verfügbar",
     "no_match": "Keine Treffer für die Suche.",
     "nothing": "Nichts zu aktualisieren.",
-    "other": "Versionsformat geändert",
     "packages": "Pakete ({count})",
-    "patch": "Patch-Update",
-    "removed": "entfernt",
-    "search": "Nach Name, Version oder Quelle suchen",
-    "versions_added": "kommt dazu: {versions}",
-    "versions_removed": "fällt weg: {versions}"
+    "search": "Nach Name oder Version suchen"
   },
   "errors": {
     "no_flake": "Keine flake.nix in {dir}",
@@ -42,6 +39,11 @@
     "checking_step": "Suche nach Updates: {step} …",
     "flatpak": "Flatpak-Updates: {count}",
     "inputs": "Flake-Inputs mit neuen Commits: {count}",
+    "more_inputs": {
+      "one": "{count} weiterer Flake-Input · alle anzeigen",
+      "other": "{count} weitere Flake-Inputs · alle anzeigen"
+    },
+    "more_updates": "{hidden} weitere · alle {count} Updates anzeigen",
     "never_checked": "Noch nicht geprüft",
     "new_commit": "neuer Build",
     "no_package_list": "Paketversionen werden nicht verglichen (in den Einstellungen aus oder die Auswertung ist fehlgeschlagen), die Zahl oben ist daher die Anzahl geänderter Inputs.",
@@ -54,7 +56,6 @@
     },
     "removed": "entfernt: {version}",
     "set_update_command": "Update-Befehl festlegen",
-    "show_all": "Vollständige Liste anzeigen",
     "title": "NixOS-Updates",
     "up_to_date": "Alles aktuell · geprüft {time}",
     "update": "Aktualisieren"

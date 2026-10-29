@@ -50,7 +50,7 @@ local function inputRow(input)
 	local tooltip = nil
 	if input.url ~= nil then
 		onClick = function()
-			view.openCompare(input)
+			view.openUrl(input.url)
 		end
 		tooltip = noctalia.tr("panel.open_compare")
 	end
@@ -58,27 +58,46 @@ local function inputRow(input)
 end
 
 local function packageRow(pkg)
-	return row("pkg-" .. pkg.name, pkg.name, "", view.change(pkg.old, pkg.new))
+	local onClick = pkg.changes ~= nil and function()
+		view.openUrl(pkg.changes)
+	end or nil
+	return row("pkg-" .. pkg.name, pkg.name, "", view.change(pkg.old, pkg.new), onClick, pkg.changes)
 end
 
 local function flatpakRow(fp)
 	local meta = fp.app .. " · " .. fp.branch .. " · " .. fp.installation
-	return row("fp-" .. fp.installation .. fp.app .. fp.branch, fp.name, meta, view.flatpakChange(fp))
+	local onClick = fp.changes ~= nil and function()
+		view.openUrl(fp.changes)
+	end or nil
+	return row("fp-" .. fp.installation .. fp.app .. fp.branch, fp.name, meta, view.flatpakChange(fp), onClick, fp.changes)
+end
+
+local function moreButton(text)
+	return ui.button({
+		text = text,
+		glyph = "list-details",
+		fontSize = 12,
+		glyphSize = 12,
+		variant = "outline",
+		controlSize = "sm",
+		onClick = openDetails,
+	})
 end
 
 -- Collapsible section; nil when the check did not cover it. Shows at most
--- `budget` rows and returns how many it showed and whether it cut rows off.
-local function section(id, glyph, labelKey, rows, makeRow, budget)
+-- `budget` rows; `more(hidden)` gives the button that replaces the rest, or
+-- nil to leave it out. Returns the node and the number of rows shown.
+local function section(id, glyph, labelKey, rows, makeRow, budget, more)
 	if type(rows) ~= "table" then
-		return nil, 0, false
+		return nil, 0
 	end
-	local open = expanded[id] and #rows > 0
+	local shown = expanded[id] and math.min(#rows, budget) or 0
 	local children = {
 		ui.row({ align = "center", gap = 6 }, {
 			ui.glyph({ name = glyph, size = 16, color = "primary" }),
 			ui.button({
 				text = noctalia.tr(labelKey, { count = #rows }),
-				glyph = #rows == 0 and "check" or (open and "chevron-up" or "chevron-down"),
+				glyph = #rows == 0 and "check" or (shown > 0 and "chevron-up" or "chevron-down"),
 				fontSize = 12,
 				glyphSize = 12,
 				variant = "ghost",
@@ -91,18 +110,20 @@ local function section(id, glyph, labelKey, rows, makeRow, budget)
 			}),
 		}),
 	}
-	local shown = 0
-	if open then
-		shown = math.min(#rows, budget)
-		local list = {}
-		for i = 1, shown do
-			table.insert(list, makeRow(rows[i]))
-		end
-		if shown > 0 then
-			table.insert(children, ui.column({ gap = 2 }, list))
+	local list = {}
+	for i = 1, shown do
+		table.insert(list, makeRow(rows[i]))
+	end
+	if expanded[id] and shown < #rows then
+		local button = more(#rows - shown)
+		if button ~= nil then
+			table.insert(list, button)
 		end
 	end
-	return ui.column({ gap = 4 }, children), shown, open and shown < #rows
+	if #list > 0 then
+		table.insert(children, ui.column({ gap = 2 }, list))
+	end
+	return ui.column({ gap = 4 }, children), shown
 end
 
 function render()
@@ -113,31 +134,41 @@ function render()
 	table.insert(body, ui.label({ text = view.status(result), fontSize = 12, color = "on_surface_variant" }))
 
 	if result.checkedAt ~= nil then
-		local kinds = {
-			{ "inputs", "snowflake", "panel.inputs", result.inputs, inputRow },
-			{ "packages", "package", "panel.packages", result.packages, packageRow },
-			{ "flatpak", "box", "panel.flatpak", result.flatpak, flatpakRow },
-		}
+		-- What the count above is made of comes first: package changes and
+		-- Flatpak updates, or the inputs when packages are not compared.
+		local packages = { "packages", "package", "panel.packages", result.packages, packageRow, true }
+		local flatpak = { "flatpak", "box", "panel.flatpak", result.flatpak, flatpakRow, true }
+		local inputs = { "inputs", "snowflake", "panel.inputs", result.inputs, inputRow, false }
+		local kinds = { packages, flatpak, inputs }
+		if type(result.packages) ~= "table" then
+			inputs[6] = true
+			kinds = { inputs, flatpak }
+		end
+		local count = tonumber(result.count) or 0
 		local budget = PREVIEW
-		local truncated = false
+		local shownCounted = 0
+		local buttonPlaced = false
 		for _, k in ipairs(kinds) do
-			local node, shown, cut = section(k[1], k[2], k[3], k[4], k[5], budget)
+			-- One button where the list is cut first: with the updates still
+			-- hidden in the same unit as the count above, else the inputs.
+			local function more(hidden)
+				if buttonPlaced then
+					return nil
+				end
+				buttonPlaced = true
+				if k[6] then
+					return moreButton(noctalia.tr("panel.more_updates", { hidden = count - shownCounted - math.min(#k[4], budget), count = count }))
+				end
+				return moreButton(noctalia.trp("panel.more_inputs", hidden))
+			end
+			local node, shown = section(k[1], k[2], k[3], k[4], k[5], budget, more)
 			if node ~= nil then
 				table.insert(body, node)
 				budget -= shown
-				truncated = truncated or cut
+				if k[6] then
+					shownCounted += shown
+				end
 			end
-		end
-		if truncated then
-			table.insert(body, ui.button({
-				text = noctalia.tr("panel.show_all"),
-				glyph = "list-details",
-				fontSize = 12,
-				glyphSize = 12,
-				variant = "outline",
-				controlSize = "sm",
-				onClick = openDetails,
-			}))
 		end
 		if type(result.inputs) == "table" and type(result.packages) ~= "table" and #result.inputs > 0 then
 			table.insert(body, ui.label({ text = noctalia.tr("panel.no_package_list"), fontSize = 11, color = "on_surface_variant", maxLines = 3 }))

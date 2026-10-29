@@ -5,9 +5,9 @@
 
 local view = require("./lib/view.luau")
 
-local OLD_WIDTH = 210
-local NEW_WIDTH = 210
-local INFO_WIDTH = 250
+local NAME_WIDTH = 230
+local OLD_WIDTH = 190
+local NEW_WIDTH = 190
 
 local result = noctalia.state.get(view.RESULT_KEY) or {}
 local query = ""
@@ -28,12 +28,14 @@ end
 
 -- Labels size to their text; the fixed-width row around them keeps the
 -- columns aligned.
-local function cell(text, width, color, weight)
-	return ui.row({ width = width, minWidth = width, align = "center" }, {
+-- Labels size to their text; the fixed-width row around them keeps the
+-- columns aligned. Without a width the cell takes the remaining space.
+local function cell(text, width, color, weight, size)
+	return ui.row({ width = width, minWidth = width, flexGrow = width == nil and 1 or nil, align = "center" }, {
 		ui.label({
 			text = text,
 			flexGrow = 1,
-			fontSize = 12,
+			fontSize = size or 12,
 			fontWeight = weight,
 			color = color or "on_surface",
 			maxLines = 1,
@@ -41,7 +43,20 @@ local function cell(text, width, color, weight)
 	})
 end
 
-local function tableRow(key, index, name, old, new, info, onClick, tooltip)
+-- The changes column: a link (glyph plus what it leads to) or a muted note
+-- that there is none.
+local function changesCell(url, labelKey, noneKey)
+	if url == nil then
+		return cell(noctalia.tr(noneKey), nil, "on_surface_variant/0.6")
+	end
+	return ui.row({ flexGrow = 1, gap = 6, align = "center" }, {
+		ui.glyph({ name = "external-link", size = 13, color = "secondary" }),
+		ui.label({ text = noctalia.tr(labelKey), flexGrow = 1, fontSize = 12, color = "secondary", maxLines = 1 }),
+	})
+end
+
+-- A click anywhere on a row opens its changes link; the tooltip shows where.
+local function tableRow(key, index, name, old, new, url, labelKey, noneKey)
 	return ui.row({
 		key = key,
 		align = "center",
@@ -50,13 +65,15 @@ local function tableRow(key, index, name, old, new, info, onClick, tooltip)
 		paddingV = 6,
 		radius = 6,
 		fill = index % 2 == 0 and "on_surface/0.04" or nil,
-		tooltip = tooltip,
-		onClick = onClick,
+		tooltip = url,
+		onClick = url ~= nil and function()
+			view.openUrl(url)
+		end or nil,
 	}, {
-		ui.label({ text = name, flexGrow = 1, fontSize = 13, fontWeight = "medium", color = "on_surface", maxLines = 1 }),
+		cell(name, NAME_WIDTH, "on_surface", "medium", 13),
 		cell(old, OLD_WIDTH, "on_surface_variant"),
 		cell(new, NEW_WIDTH, "primary", "medium"),
-		cell(info, INFO_WIDTH, "on_surface_variant"),
+		changesCell(url, labelKey, noneKey),
 	})
 end
 
@@ -69,10 +86,10 @@ local function header()
 		return ui.row({ width = width, minWidth = width }, { label })
 	end
 	return ui.row({ gap = 12, paddingH = 10 }, {
-		head("details.name", nil),
+		head("details.name", NAME_WIDTH),
 		head("details.installed", OLD_WIDTH),
 		head("details.new", NEW_WIDTH),
-		head("details.info", INFO_WIDTH),
+		head("details.changes", nil),
 	})
 end
 
@@ -92,11 +109,9 @@ local function inputRows()
 				input.name,
 				withDate(input.oldRev, input.oldDate),
 				withDate(input.newRev, input.newDate),
-				input.source,
-				input.url ~= nil and function()
-					view.openCompare(input)
-				end or nil,
-				input.url ~= nil and noctalia.tr("panel.open_compare") or nil
+				input.url,
+				"details.link_commits",
+				"details.no_compare"
 			))
 		end
 	end
@@ -107,7 +122,8 @@ local function packageRows()
 	local rows = {}
 	for _, pkg in ipairs(result.packages or {}) do
 		if matches(pkg.name, pkg.old, pkg.new) then
-			table.insert(rows, tableRow("pkg-" .. pkg.name, #rows + 1, pkg.name, pkg.old, pkg.new, view.changeKind(pkg.old, pkg.new)))
+			local labelKey = pkg.changesKind == "releases" and "details.link_releases" or "details.link_changelog"
+			table.insert(rows, tableRow("pkg-" .. pkg.name, #rows + 1, pkg.name, pkg.old, pkg.new, pkg.changes, labelKey, "details.no_changelog"))
 		end
 	end
 	return rows
@@ -118,17 +134,26 @@ local function flatpakRows()
 	for _, fp in ipairs(result.flatpak or {}) do
 		if matches(fp.name, fp.app) then
 			local new = fp.new ~= "" and fp.new or noctalia.tr("panel.new_commit")
-			local info = fp.app .. " · " .. fp.branch .. " · " .. fp.installation
-			table.insert(rows, tableRow("fp-" .. fp.installation .. fp.app .. fp.branch, #rows + 1, fp.name, fp.old, new, info))
+			table.insert(rows, tableRow(
+				"fp-" .. fp.installation .. fp.app .. fp.branch,
+				#rows + 1,
+				fp.name,
+				fp.old,
+				new,
+				fp.changes,
+				"details.link_flathub",
+				"details.no_changelog"
+			))
 		end
 	end
 	return rows
 end
 
+-- Same order as the compact panel: what the update count is made of first.
 local KINDS = {
-	{ id = "inputs", glyph = "snowflake", label = "details.inputs", field = "inputs", rows = inputRows },
 	{ id = "packages", glyph = "package", label = "details.packages", field = "packages", rows = packageRows },
 	{ id = "flatpak", glyph = "box", label = "details.flatpak", field = "flatpak", rows = flatpakRows },
+	{ id = "inputs", glyph = "snowflake", label = "details.inputs", field = "inputs", rows = inputRows },
 }
 
 local function filterButton(id, text)
@@ -217,7 +242,10 @@ noctalia.state.watch(view.RESULT_KEY, function(value)
 	end
 end)
 
+-- Every opening starts with an empty search and all kinds shown.
 function onOpen(_context)
+	query = ""
+	filter = "all"
 	render()
 end
 

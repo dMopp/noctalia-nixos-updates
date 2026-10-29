@@ -24,7 +24,7 @@ installed. Updating is up to you, through the command you set for the panel's
 - `sh`, `cat`, `cmp`, `cp`, `mv`, `rm`, `grep`, `sed`, `tail`, `tr` (coreutils,
   diffutils).
 - Optional: `flatpak` for the Flatpak list.
-- Optional: `xdg-open` to open the commit comparison of an input from the panel.
+- Optional: `xdg-open` to open changelogs and commit comparisons from the panels.
 
 ## Usage
 
@@ -42,21 +42,30 @@ updated) triggers a new check about 20 seconds later.
 
 Left-click the widget for the panel:
 
-- **Flake inputs with new commits**: old and new revision, source and commit
-  dates. Click an input hosted on GitHub, GitLab or Codeberg to open the
-  comparison of both revisions in the browser.
 - **Package changes**: every entry of `environment.systemPackages` plus the
   kernel whose version changes, appears or disappears.
 - **Flatpak updates**: system and user installation, installed and new
   version (runtimes without a version show "new build").
+- **Flake inputs with new commits**: old and new revision, source and commit
+  dates.
 - **Check now** and **Update**.
 
-The compact panel shows at most eight rows across all sections; with more,
-one **Show the full list** button below them (or the maximize button in the
-header) opens the details window: one table with name, installed and new
-version and details for every update (for packages: major, minor or patch
-update, downgrade, new or removed), a search field (name, version or source)
-and a filter by kind.
+Updates (packages, Flatpaks) come first, the inputs that bring them after.
+The compact panel shows at most eight rows in all; where it cuts the list, one
+button says how many updates are hidden and opens the details window
+("9 more · show all 17 updates", the same count as above). The maximize
+button in the header opens it as well: one table with name, installed and new
+version and where to read the changes, plus a search field and a filter by
+kind.
+
+Changes column (a click on the row opens it; in the compact panel too):
+
+- Packages: the package's `meta.changelog` from nixpkgs, often for exactly
+  the new version; else the GitHub releases page when the homepage is a
+  GitHub repository; else "No changelog".
+- Flatpaks from Flathub: the app page, which lists the release notes.
+  Runtimes have none.
+- Inputs on GitHub, GitLab or Codeberg: the comparison of both revisions.
 
 ```sh
 noctalia msg panel-toggle dmopp/nixos-updates:panel
@@ -108,12 +117,14 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
      resolves every input to its latest revision and writes the result to the
      plugin data directory, not to `flake.lock`.
   2. `nix eval --json --no-write-lock-file --reference-lock-file <lock> '<flake_dir>#nixosConfigurations."<name>".config' --apply …`
-     reads name and version of every `environment.systemPackages` entry and of
+     reads name, version, `meta.changelog` and `meta.homepage` of every
+     `environment.systemPackages` entry and of
      `boot.kernelPackages.kernel`, once with `flake.lock` and once with
      `new.lock`. Nothing is built. Each result is cached with a copy of its
      lock and only evaluated again when that lock changed; when both locks are
      equal the second evaluation is skipped.
-  3. `flatpak list` and `flatpak remote-ls --system|--user --updates`.
+  3. `flatpak list` (with origin, for the Flathub link) and
+     `flatpak remote-ls --system|--user --updates`.
 - **Network:** `nix` fetches the inputs' latest revisions (and, on the first
   evaluation of a new nixpkgs, its source) like `nix flake update` does;
   `flatpak remote-ls` fetches the remotes' metadata. The plugin itself makes no
@@ -126,11 +137,11 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
   time only).
 - **Files written:** only in the plugin data directory
   (`noctalia.pluginDataDir()`): `new.lock`, `packages-old.json`,
-  `packages-new.json` with their `.lock` copies, `flatpak-installed.tsv`,
+  `packages-new.json` with their `.v3.lock` copies, `flatpak-installed.tsv`,
   `flatpak-updates.tsv`, and `result.json` with the last result.
 - **Processes:** `sh scripts/check.sh` (with the `nix` and `flatpak` calls
-  above), `xdg-open <compare url>` on a click on an input, and the configured
-  update command in a terminal on **Update**.
+  above), `xdg-open <url>` on a click on a row with a changes link, and the
+  configured update command in a terminal on **Update**.
 - Only packages listed in `environment.systemPackages` (and the kernel) are
   compared, not their dependencies or services. Home Manager packages are not
   included.

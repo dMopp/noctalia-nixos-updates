@@ -1,25 +1,22 @@
 {
   "details": {
-    "added": "new package",
     "all": "All ({count})",
-    "downgrade": "downgrade",
+    "changes": "Changes",
     "flatpak": "Flatpak ({count})",
-    "info": "Details",
     "inputs": "Flake inputs ({count})",
     "installed": "Installed",
-    "major": "major update",
-    "minor": "minor update",
+    "link_changelog": "Changelog",
+    "link_commits": "Compare commits",
+    "link_flathub": "Release notes on Flathub",
+    "link_releases": "GitHub releases",
     "name": "Name",
     "new": "New",
+    "no_changelog": "No changelog",
+    "no_compare": "No comparison available",
     "no_match": "Nothing matches the search.",
     "nothing": "Nothing to update.",
-    "other": "version format changed",
     "packages": "Packages ({count})",
-    "patch": "patch update",
-    "removed": "removed",
-    "search": "Search by name, version or source",
-    "versions_added": "adds {versions}",
-    "versions_removed": "drops {versions}"
+    "search": "Search by name or version"
   },
   "errors": {
     "no_flake": "No flake.nix in {dir}",
@@ -42,6 +39,11 @@
     "checking_step": "Checking for updates: {step}…",
     "flatpak": "Flatpak updates: {count}",
     "inputs": "Flake inputs with new commits: {count}",
+    "more_inputs": {
+      "one": "{count} more flake input · show all",
+      "other": "{count} more flake inputs · show all"
+    },
+    "more_updates": "{hidden} more · show all {count} updates",
     "never_checked": "Not checked yet",
     "new_commit": "new build",
     "no_package_list": "Package versions are not compared (turned off in the settings or the evaluation failed), so the count above is the number of changed inputs.",
@@ -54,7 +56,6 @@
     },
     "removed": "removed: {version}",
     "set_update_command": "Set update command",
-    "show_all": "Show the full list",
     "title": "NixOS Updates",
     "up_to_date": "Everything is up to date · checked {time}",
     "update": "Update"

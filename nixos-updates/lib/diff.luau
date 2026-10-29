@@ -99,13 +99,24 @@ function M.inputs(oldLock, newLock, ignored)
 	return rows, total
 end
 
+-- name -> versions joined with ", ", and name -> { c, h } (changelog and
+-- homepage, the first non-empty one seen).
 local function versions(list)
 	local byName = {}
+	local meta = {}
 	for _, entry in ipairs(type(list) == "table" and list or {}) do
 		local name = tostring(entry.n or "")
 		if name ~= "" then
 			byName[name] = byName[name] or {}
 			byName[name][tostring(entry.v or "")] = true
+			local m = meta[name] or { c = "", h = "" }
+			if m.c == "" then
+				m.c = tostring(entry.c or "")
+			end
+			if m.h == "" then
+				m.h = tostring(entry.h or "")
+			end
+			meta[name] = m
 		end
 	end
 	local out = {}
@@ -117,25 +128,43 @@ local function versions(list)
 		table.sort(list2)
 		out[name] = table.concat(list2, ", ")
 	end
-	return out
+	return out, meta
+end
+
+-- Where to read what changed: the package's meta.changelog (often for that
+-- very version), else the releases page when the homepage is a GitHub repo.
+local function changesUrl(m)
+	if m.c ~= nil and m.c ~= "" then
+		return m.c, "changelog"
+	end
+	local repo = tostring(m.h or ""):match("^https?://github%.com/([%w%._%-]+/[%w%._%-]+)")
+	if repo ~= nil then
+		return "https://github.com/" .. repo:gsub("%.git$", "") .. "/releases", "releases"
+	end
+	return nil, nil
 end
 
 -- Packages whose version changes, appears or disappears. old/new are "" for
--- added/removed ones.
+-- added/removed ones; the changes link comes from the new side, for removed
+-- packages from the old one, and is nil when there is none.
 function M.packages(oldList, newList)
-	local old = versions(oldList)
-	local new = versions(newList)
+	local old, oldMeta = versions(oldList)
+	local new, newMeta = versions(newList)
 	local rows = {}
+	local function add(name, o, n)
+		local url, kind = changesUrl(newMeta[name] or oldMeta[name] or {})
+		table.insert(rows, { name = name, old = o, new = n, changes = url, changesKind = kind })
+	end
 	local seen = {}
 	for name, v in pairs(old) do
 		seen[name] = true
 		if new[name] ~= v then
-			table.insert(rows, { name = name, old = v, new = new[name] or "" })
+			add(name, v, new[name] or "")
 		end
 	end
 	for name, v in pairs(new) do
 		if not seen[name] then
-			table.insert(rows, { name = name, old = "", new = v })
+			add(name, "", v)
 		end
 	end
 	table.sort(rows, function(a, b)
@@ -156,12 +185,12 @@ local function tsv(text)
 	return rows
 end
 
--- installed: installation, application, branch, version, name.
+-- installed: installation, application, branch, version, name, origin.
 -- updates: installation, application, branch, new version.
 function M.flatpak(installedText, updatesText)
 	local installed = {}
 	for _, f in ipairs(tsv(installedText)) do
-		installed[(f[1] or "") .. "|" .. (f[2] or "") .. "|" .. (f[3] or "")] = { version = f[4] or "", name = f[5] or "" }
+		installed[(f[1] or "") .. "|" .. (f[2] or "") .. "|" .. (f[3] or "")] = { version = f[4] or "", name = f[5] or "", origin = f[6] or "" }
 	end
 	local rows = {}
 	for _, f in ipairs(tsv(updatesText)) do
@@ -175,6 +204,9 @@ function M.flatpak(installedText, updatesText)
 				name = (have.name ~= nil and have.name ~= "") and have.name or app,
 				old = have.version or "",
 				new = f[4] or "",
+				-- Flathub shows the release notes on the app page; runtimes
+				-- (versioned branches) have no such page.
+				changes = (have.origin == "flathub" and f[3] == "stable") and ("https://flathub.org/apps/" .. app) or nil,
 			})
 		end
 	end

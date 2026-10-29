@@ -12,7 +12,8 @@
 #
 # Result files: new.lock (the lock `nix flake update` would write),
 # packages-old.json / packages-new.json (name and version of every
-# environment.systemPackages entry plus the kernel), flatpak-installed.tsv,
+# environment.systemPackages entry plus the kernel, with changelog and
+# homepage), flatpak-installed.tsv,
 # flatpak-updates.tsv (installation, application, branch, new version).
 
 set -u
@@ -30,32 +31,37 @@ fail() {
 	printf 'fail %s %s\n' "$1" "$(grep -v '^warning:' "$err" | tail -n 3 | tr '\n\t' '  ')"
 }
 
-# Name and version of each package; entries that fail to evaluate (broken,
-# unfree without permission) are skipped instead of failing the whole list.
+# Name, version, changelog and homepage of each package; entries that fail to
+# evaluate (broken, unfree without permission) are skipped instead of failing
+# the whole list, a missing changelog or homepage just stays "".
 apply='c: let
-  pkg = p: let r = builtins.tryEval (
-    if p ? pname then { n = p.pname; v = p.version or ""; }
-    else let d = builtins.parseDrvName (p.name or ""); in { n = d.name; v = d.version; });
+  text = x: let r = builtins.tryEval (if builtins.isString x then x else if builtins.isList x && x != [ ] && builtins.isString (builtins.head x) then builtins.head x else ""); in if r.success then r.value else "";
+  pkg = p: let
+    info = (if p ? pname then { n = p.pname; v = p.version or ""; }
+      else let d = builtins.parseDrvName (p.name or ""); in { n = d.name; v = d.version; })
+      // { c = text (p.meta.changelog or ""); h = text (p.meta.homepage or ""); };
+    r = builtins.tryEval (builtins.deepSeq info info);
   in if r.success then [ r.value ] else [ ];
   kernel = builtins.tryEval c.boot.kernelPackages.kernel;
 in builtins.concatMap pkg (c.environment.systemPackages ++ (if kernel.success then [ kernel.value ] else [ ]))'
 
 # Evaluates the package list for one lock file into $2, unless the lock is the
-# same as on the last evaluation ($2.lock keeps a copy of it).
+# same as on the last evaluation ($2.v3.lock keeps a copy of it; the v3 marks
+# the result format, so results in an older format are evaluated again).
 evaluate() {
 	lock=$1
 	result=$2
-	if [ -s "$result" ] && cmp -s "$lock" "$result.lock"; then
+	if [ -s "$result" ] && cmp -s "$lock" "$result.v3.lock"; then
 		return 0
 	fi
 	# shellcheck disable=SC2086
 	if nix $nixflags eval --json --no-write-lock-file --reference-lock-file "$lock" \
 		"$dir#nixosConfigurations.\"$cfg\".config" --apply "$apply" >"$result.tmp" 2>"$err"; then
 		mv "$result.tmp" "$result"
-		cp "$lock" "$result.lock"
+		cp "$lock" "$result.v3.lock"
 		return 0
 	fi
-	rm -f "$result.tmp" "$result" "$result.lock"
+	rm -f "$result.tmp" "$result" "$result.v3.lock"
 	return 1
 }
 
@@ -75,7 +81,7 @@ if [ -n "$dir" ]; then
 		elif cmp -s "$dir/flake.lock" "$out/new.lock"; then
 			# Nothing to update: same lock, same packages.
 			cp "$out/packages-old.json" "$out/packages-new.json"
-			cp "$out/new.lock" "$out/packages-new.json.lock"
+			cp "$out/new.lock" "$out/packages-new.json.v3.lock"
 		else
 			echo "step eval-new"
 			evaluate "$out/new.lock" "$out/packages-new.json" || fail eval-new
@@ -85,7 +91,7 @@ fi
 
 if [ "$flatpak" = 1 ] && command -v flatpak >/dev/null 2>&1; then
 	echo "step flatpak"
-	flatpak list --columns=installation,application,branch,version,name >"$out/flatpak-installed.tsv" 2>"$err" || fail flatpak
+	flatpak list --columns=installation,application,branch,version,name,origin >"$out/flatpak-installed.tsv" 2>"$err" || fail flatpak
 	: >"$out/flatpak-updates.tsv"
 	for inst in system user; do
 		if flatpak remote-ls "--$inst" --updates --columns=application,branch,version >"$out/flatpak-$inst.tsv" 2>"$err"; then
