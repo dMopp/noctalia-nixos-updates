@@ -1,0 +1,102 @@
+{
+  "errors": {
+    "no_flake": "No flake.nix in {dir}",
+    "no_lock": "No flake.lock in {dir}",
+    "no_nix": "nix is not on PATH",
+    "not_started": "Could not start the update check",
+    "step_failed": "{step} failed: {message}"
+  },
+  "notify": {
+    "body": {
+      "one": "{count} update available",
+      "other": "{count} updates available"
+    },
+    "title": "NixOS Updates"
+  },
+  "panel": {
+    "added": "new: {version}",
+    "check_now": "Check now",
+    "checking": "Checking for updates…",
+    "checking_step": "Checking for updates: {step}…",
+    "flatpak": "Flatpak updates: {count}",
+    "inputs": "Flake inputs with new commits: {count}",
+    "never_checked": "Not checked yet",
+    "new_commit": "new build",
+    "no_package_list": "Package versions are not compared (turned off in the settings or the evaluation failed), so the count above is the number of changed inputs.",
+    "open_compare": "Open the commits between both revisions",
+    "packages": "Package changes: {count}",
+    "pending": {
+      "one": "{count} update · checked {time}",
+      "other": "{count} updates · checked {time}"
+    },
+    "removed": "removed: {version}",
+    "set_update_command": "Set update command",
+    "title": "NixOS Updates",
+    "up_to_date": "Everything is up to date · checked {time}",
+    "update": "Update"
+  },
+  "settings": {
+    "check_flatpak": {
+      "description": "List pending updates of system and user Flatpaks (flatpak remote-ls --updates).",
+      "label": "Check Flatpaks"
+    },
+    "check_interval_hours": {
+      "description": "Hours between two checks. Updating flake.lock or a Flatpak installation triggers a check on its own.",
+      "label": "Check interval (hours)"
+    },
+    "check_packages": {
+      "description": "Evaluate the NixOS configuration with the current and the updated lock and list the package versions that change. Takes a few seconds of CPU per check, longer when a new nixpkgs has to be downloaded.",
+      "label": "Compare package versions"
+    },
+    "flake_dir": {
+      "description": "Directory with flake.nix and flake.lock. It is only read; the updated lock goes to the plugin's data directory. Empty: only Flatpaks.",
+      "label": "Flake directory"
+    },
+    "glyph": {
+      "label": "Glyph"
+    },
+    "hide_when_up_to_date": {
+      "description": "Hide the widget while there is nothing to update and no error.",
+      "label": "Hide when up to date"
+    },
+    "highlight_color": {
+      "label": "Glyph color with updates"
+    },
+    "ignored_inputs": {
+      "description": "Flake input names to leave out of the input list, for example ones you update on your own schedule.",
+      "label": "Ignored inputs"
+    },
+    "nixos_configuration": {
+      "description": "Name under nixosConfigurations to evaluate. Empty: this machine's hostname.",
+      "label": "NixOS configuration"
+    },
+    "notify": {
+      "description": "Show a notification when a check finds updates that were not pending before.",
+      "label": "Notify about new updates"
+    },
+    "show_count": {
+      "label": "Show count"
+    },
+    "show_zero": {
+      "label": "Show 0 when up to date"
+    },
+    "update_command": {
+      "description": "Runs in a terminal from the panel's Update button, for example: nix flake update --flake /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos && flatpak update -y. Empty: no Update button.",
+      "label": "Update command"
+    }
+  },
+  "steps": {
+    "eval-new": "evaluating the updated configuration",
+    "eval-old": "evaluating the current configuration",
+    "flatpak": "Flatpak",
+    "lock": "flake update"
+  },
+  "widget": {
+    "checked": "Checked",
+    "error": "Error",
+    "flatpak": "Flatpak updates",
+    "inputs": "Changed flake inputs",
+    "packages": "Package changes",
+    "title": "NixOS Updates"
+  }
+}

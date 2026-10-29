@@ -1,0 +1,102 @@
+{
+  "errors": {
+    "no_flake": "Keine flake.nix in {dir}",
+    "no_lock": "Keine flake.lock in {dir}",
+    "no_nix": "nix ist nicht im PATH",
+    "not_started": "Update-Prüfung konnte nicht gestartet werden",
+    "step_failed": "{step} fehlgeschlagen: {message}"
+  },
+  "notify": {
+    "body": {
+      "one": "{count} Update verfügbar",
+      "other": "{count} Updates verfügbar"
+    },
+    "title": "NixOS-Updates"
+  },
+  "panel": {
+    "added": "neu: {version}",
+    "check_now": "Jetzt prüfen",
+    "checking": "Suche nach Updates …",
+    "checking_step": "Suche nach Updates: {step} …",
+    "flatpak": "Flatpak-Updates: {count}",
+    "inputs": "Flake-Inputs mit neuen Commits: {count}",
+    "never_checked": "Noch nicht geprüft",
+    "new_commit": "neuer Build",
+    "no_package_list": "Paketversionen werden nicht verglichen (in den Einstellungen aus oder die Auswertung ist fehlgeschlagen), die Zahl oben ist daher die Anzahl geänderter Inputs.",
+    "open_compare": "Commits zwischen beiden Revisionen öffnen",
+    "packages": "Paketänderungen: {count}",
+    "pending": {
+      "one": "{count} Update · geprüft {time}",
+      "other": "{count} Updates · geprüft {time}"
+    },
+    "removed": "entfernt: {version}",
+    "set_update_command": "Update-Befehl festlegen",
+    "title": "NixOS-Updates",
+    "up_to_date": "Alles aktuell · geprüft {time}",
+    "update": "Aktualisieren"
+  },
+  "settings": {
+    "check_flatpak": {
+      "description": "Ausstehende Updates von System- und Benutzer-Flatpaks auflisten (flatpak remote-ls --updates).",
+      "label": "Flatpaks prüfen"
+    },
+    "check_interval_hours": {
+      "description": "Stunden zwischen zwei Prüfungen. Eine geänderte flake.lock oder Flatpak-Installation löst von selbst eine Prüfung aus.",
+      "label": "Prüfintervall (Stunden)"
+    },
+    "check_packages": {
+      "description": "Die NixOS-Konfiguration mit der aktuellen und der aktualisierten Lock-Datei auswerten und die Paketversionen auflisten, die sich ändern. Kostet pro Prüfung ein paar Sekunden CPU, länger wenn ein neues nixpkgs geladen werden muss.",
+      "label": "Paketversionen vergleichen"
+    },
+    "flake_dir": {
+      "description": "Verzeichnis mit flake.nix und flake.lock. Wird nur gelesen; die aktualisierte Lock-Datei landet im Datenverzeichnis des Plugins. Leer: nur Flatpaks.",
+      "label": "Flake-Verzeichnis"
+    },
+    "glyph": {
+      "label": "Symbol"
+    },
+    "hide_when_up_to_date": {
+      "description": "Widget ausblenden, solange es nichts zu aktualisieren gibt und kein Fehler vorliegt.",
+      "label": "Ausblenden wenn aktuell"
+    },
+    "highlight_color": {
+      "label": "Symbolfarbe bei Updates"
+    },
+    "ignored_inputs": {
+      "description": "Namen von Flake-Inputs, die in der Input-Liste fehlen sollen, z. B. solche, die du nach eigenem Plan aktualisierst.",
+      "label": "Ignorierte Inputs"
+    },
+    "nixos_configuration": {
+      "description": "Name unter nixosConfigurations, der ausgewertet wird. Leer: Hostname dieses Rechners.",
+      "label": "NixOS-Konfiguration"
+    },
+    "notify": {
+      "description": "Benachrichtigen, wenn eine Prüfung Updates findet, die vorher noch nicht anstanden.",
+      "label": "Über neue Updates benachrichtigen"
+    },
+    "show_count": {
+      "label": "Anzahl anzeigen"
+    },
+    "show_zero": {
+      "label": "0 anzeigen wenn aktuell"
+    },
+    "update_command": {
+      "description": "Läuft über den Aktualisieren-Knopf im Panel in einem Terminal, z. B.: nix flake update --flake /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos && flatpak update -y. Leer: kein Aktualisieren-Knopf.",
+      "label": "Update-Befehl"
+    }
+  },
+  "steps": {
+    "eval-new": "aktualisierte Konfiguration auswerten",
+    "eval-old": "aktuelle Konfiguration auswerten",
+    "flatpak": "Flatpak",
+    "lock": "Flake-Update"
+  },
+  "widget": {
+    "checked": "Geprüft",
+    "error": "Fehler",
+    "flatpak": "Flatpak-Updates",
+    "inputs": "Geänderte Flake-Inputs",
+    "packages": "Paketänderungen",
+    "title": "NixOS-Updates"
+  }
+}
