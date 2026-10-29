@@ -14,7 +14,7 @@ installed. Updating is up to you, through the command you set for the panel's
 | Field | Value |
 | --- | --- |
 | ID | `dmopp/nixos-updates` |
-| Entries | Bar widget: `updates`; panel: `panel`; service: `service` |
+| Entries | Bar widget: `updates`; panels: `panel` (compact), `details` (full list); service: `service` |
 
 ## Requirements
 
@@ -51,8 +51,14 @@ Left-click the widget for the panel:
   version (runtimes without a version show "new build").
 - **Check now** and **Update**.
 
+Each section of the compact panel shows its first six rows. **Show N more…**
+or the maximize button in the header opens the details window: one table with
+name, installed and new version and details for every update, a search field
+(name, version or source) and a filter by kind.
+
 ```sh
 noctalia msg panel-toggle dmopp/nixos-updates:panel
+noctalia msg panel-toggle dmopp/nixos-updates:details
 ```
 
 The widget count is the number of package changes plus Flatpak updates; when

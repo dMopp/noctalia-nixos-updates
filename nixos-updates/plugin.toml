@@ -5,7 +5,7 @@
 
 id = "dmopp/nixos-updates"
 name = "NixOS Updates"
-version = "1.0.0"
+version = "1.1.0"
 plugin_api = 43
 author = "dMopp"
 license = "MIT"
@@ -125,3 +125,12 @@ open_near_click = true
 [[service]]
 id = "service"
 entry = "service.luau"
+
+[[panel]]
+id = "details"
+entry = "details.luau"
+width = 1000
+height = 720
+placement = "floating"
+position = "center"
+keyboard_focus = "exclusive"

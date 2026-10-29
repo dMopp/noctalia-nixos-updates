@@ -1,4 +1,19 @@
 {
+  "details": {
+    "added": "new package",
+    "all": "All ({count})",
+    "flatpak": "Flatpak ({count})",
+    "info": "Details",
+    "inputs": "Flake inputs ({count})",
+    "installed": "Installed",
+    "name": "Name",
+    "new": "New",
+    "no_match": "Nothing matches the search.",
+    "nothing": "Nothing to update.",
+    "packages": "Packages ({count})",
+    "removed": "removed",
+    "search": "Search by name, version or source"
+  },
   "errors": {
     "no_flake": "No flake.nix in {dir}",
     "no_lock": "No flake.lock in {dir}",
@@ -20,10 +35,12 @@
     "checking_step": "Checking for updates: {step}…",
     "flatpak": "Flatpak updates: {count}",
     "inputs": "Flake inputs with new commits: {count}",
+    "more": "Show {count} more…",
     "never_checked": "Not checked yet",
     "new_commit": "new build",
     "no_package_list": "Package versions are not compared (turned off in the settings or the evaluation failed), so the count above is the number of changed inputs.",
     "open_compare": "Open the commits between both revisions",
+    "open_details": "Open the full list",
     "packages": "Package changes: {count}",
     "pending": {
       "one": "{count} update · checked {time}",
