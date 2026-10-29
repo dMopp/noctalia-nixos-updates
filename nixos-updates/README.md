@@ -21,8 +21,8 @@ installed. Updating is up to you, through the command you set for the panel's
 - `nix` with flakes (the plugin passes `--extra-experimental-features "nix-command flakes"`
   itself) and support for `nix flake update --output-lock-file` and
   `nix eval --reference-lock-file`. Tested with Nix 2.34.
-- `sh`, `cat`, `cmp`, `cp`, `mv`, `rm`, `grep`, `sed`, `tail`, `tr` (coreutils,
-  diffutils).
+- `sh`, `cat`, `cmp`, `cp`, `mv`, `rm`, `grep`, `sed`, `tail`, `timeout`, `tr`
+  (coreutils, diffutils).
 - Optional: `flatpak` for the Flatpak list.
 - Optional: `xdg-open` to open changelogs and commit comparisons from the panels.
 
@@ -125,6 +125,15 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
      equal the second evaluation is skipped.
   3. `flatpak list` (with origin, for the Flathub link) and
      `flatpak remote-ls --system|--user --updates`.
+
+  Every `nix` and `flatpak` call runs under `timeout` (10 minutes for the
+  flake update, 15 per evaluation, 3 per Flatpak call), so a stalled call
+  cannot keep the script alive; the service gives a run up only after an
+  hour and ignores anything a given-up run still prints.
+- **Links** (changelogs, releases, Flathub, commit comparisons) come from
+  `flake.lock` and package metadata. Only plain `http://` / `https://` URLs
+  are shown and opened; anything else (`file://`, paths, values starting with
+  `-`, whitespace) gets no link.
 - **Network:** `nix` fetches the inputs' latest revisions (and, on the first
   evaluation of a new nixpkgs, its source) like `nix flake update` does;
   `flatpak remote-ls` fetches the remotes' metadata. The plugin itself makes no

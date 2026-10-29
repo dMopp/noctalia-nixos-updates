@@ -24,6 +24,16 @@ packages=$4
 flatpak=$5
 
 nixflags="--extra-experimental-features nix-command --extra-experimental-features flakes"
+
+# Every external call has a time limit, so the script always ends on its own:
+# the service cannot stop a stream it started. Worst case 10 + 2 * 15 + 3 * 3
+# = 49 minutes; the service waits longer than that before it gives a run up.
+# timeout -k kills what ignores the TERM after 30 seconds.
+limit() {
+	minutes=$1
+	shift
+	timeout -k 30 "${minutes}m" "$@"
+}
 err="$out/stderr"
 
 # Last stderr lines of the failed command on one line.
@@ -55,7 +65,7 @@ evaluate() {
 		return 0
 	fi
 	# shellcheck disable=SC2086
-	if nix $nixflags eval --json --no-write-lock-file --reference-lock-file "$lock" \
+	if limit 15 nix $nixflags eval --json --no-write-lock-file --reference-lock-file "$lock" \
 		"$dir#nixosConfigurations.\"$cfg\".config" --apply "$apply" >"$result.tmp" 2>"$err"; then
 		mv "$result.tmp" "$result"
 		cp "$lock" "$result.v3.lock"
@@ -71,7 +81,7 @@ if [ -n "$dir" ]; then
 	# shellcheck disable=SC2086
 	if [ ! -f "$dir/flake.lock" ]; then
 		echo "fail lock no-lock"
-	elif ! nix $nixflags flake update --flake "$dir" --output-lock-file "$out/new.lock" 2>"$err"; then
+	elif ! limit 10 nix $nixflags flake update --flake "$dir" --output-lock-file "$out/new.lock" 2>"$err"; then
 		fail lock
 	elif [ "$packages" = 1 ]; then
 		[ -n "$cfg" ] || cfg=$(cat /proc/sys/kernel/hostname)
@@ -91,10 +101,10 @@ fi
 
 if [ "$flatpak" = 1 ] && command -v flatpak >/dev/null 2>&1; then
 	echo "step flatpak"
-	flatpak list --columns=installation,application,branch,version,name,origin >"$out/flatpak-installed.tsv" 2>"$err" || fail flatpak
+	limit 3 flatpak list --columns=installation,application,branch,version,name,origin >"$out/flatpak-installed.tsv" 2>"$err" || fail flatpak
 	: >"$out/flatpak-updates.tsv"
 	for inst in system user; do
-		if flatpak remote-ls "--$inst" --updates --columns=application,branch,version >"$out/flatpak-$inst.tsv" 2>"$err"; then
+		if limit 3 flatpak remote-ls "--$inst" --updates --columns=application,branch,version >"$out/flatpak-$inst.tsv" 2>"$err"; then
 			sed "s/^/$inst\t/" "$out/flatpak-$inst.tsv" >>"$out/flatpak-updates.tsv"
 		else
 			fail flatpak

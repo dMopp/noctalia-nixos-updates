@@ -5,6 +5,19 @@
 
 local M = {}
 
+-- Links come from flake.lock and package metadata, i.e. from whoever controls
+-- an input. Only plain http(s) URLs pass: no file://, no local paths, no
+-- leading dash that xdg-open could take for an option, no whitespace.
+function M.safeUrl(url)
+	if type(url) ~= "string" or #url > 2048 then
+		return nil
+	end
+	if url:match("^https?://[%w%-%.]+[:/]?[^%s]*$") == nil then
+		return nil
+	end
+	return url
+end
+
 local function shortRev(locked)
 	if type(locked) ~= "table" then
 		return ""
@@ -44,7 +57,7 @@ local function compareUrl(original, oldLocked, newLocked)
 		return nil
 	end
 	local sep = original.type == "gitlab" and "/-/compare/" or "/compare/"
-	return base .. "/" .. original.owner .. "/" .. original.repo .. sep .. oldLocked.rev .. "..." .. newLocked.rev
+	return M.safeUrl(base .. "/" .. original.owner .. "/" .. original.repo .. sep .. oldLocked.rev .. "..." .. newLocked.rev)
 end
 
 local function rootInputs(lock)
@@ -134,12 +147,16 @@ end
 -- Where to read what changed: the package's meta.changelog (often for that
 -- very version), else the releases page when the homepage is a GitHub repo.
 local function changesUrl(m)
-	if m.c ~= nil and m.c ~= "" then
-		return m.c, "changelog"
+	local changelog = M.safeUrl(m.c)
+	if changelog ~= nil then
+		return changelog, "changelog"
 	end
 	local repo = tostring(m.h or ""):match("^https?://github%.com/([%w%._%-]+/[%w%._%-]+)")
 	if repo ~= nil then
-		return "https://github.com/" .. repo:gsub("%.git$", "") .. "/releases", "releases"
+		local url = M.safeUrl("https://github.com/" .. repo:gsub("%.git$", "") .. "/releases")
+		if url ~= nil then
+			return url, "releases"
+		end
 	end
 	return nil, nil
 end
@@ -206,7 +223,7 @@ function M.flatpak(installedText, updatesText)
 				new = f[4] or "",
 				-- Flathub shows the release notes on the app page; runtimes
 				-- (versioned branches) have no such page.
-				changes = (have.origin == "flathub" and f[3] == "stable") and ("https://flathub.org/apps/" .. app) or nil,
+				changes = (have.origin == "flathub" and f[3] == "stable") and M.safeUrl("https://flathub.org/apps/" .. app) or nil,
 			})
 		end
 	end

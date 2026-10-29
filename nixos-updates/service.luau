@@ -14,7 +14,9 @@ local RESULT_KEY = "nixos_updates"
 local COMMAND_KEY = "nixos_updates_command"
 -- A check that has not finished after this long is given up (the stream has
 -- no exit callback, so a killed script would otherwise block every check).
-local STALE_RUN_S = 30 * 60
+-- Longer than check.sh can run (its calls have time limits, 49 minutes in
+-- all), so no two runs overlap; plugins cannot stop a stream themselves.
+local STALE_RUN_S = 60 * 60
 -- Wait this long after flake.lock or a Flatpak installation changed before
 -- checking again, so an update in progress can finish.
 local SETTLE_S = 20
@@ -22,6 +24,9 @@ local SETTLE_S = 20
 local result = {}
 local running = false
 local runStarted = 0
+-- Each run's stream callback carries its id; lines from a run that was given
+-- up are ignored, so a late "done" cannot overwrite a newer result.
+local runId = 0
 local step = ""
 local errors = {}
 local changedAt = 0
@@ -222,9 +227,14 @@ local function check()
 
 	running = true
 	runStarted = os.time()
+	runId += 1
+	local id = runId
 	step = ""
 	publish()
 	local accepted = noctalia.runStream(command, function(line)
+		if id ~= runId or not running then
+			return
+		end
 		local kind, rest = line:match("^(%S+)%s*(.*)$")
 		if kind == "step" then
 			step = rest
@@ -285,6 +295,7 @@ function update()
 	if running then
 		if now - runStarted > STALE_RUN_S then
 			running = false
+			runId += 1
 			publish()
 		end
 		return

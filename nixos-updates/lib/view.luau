@@ -1,6 +1,8 @@
 --!nonstrict
 -- Formatting shared by the compact panel and the details window.
 
+local diff = require("./diff.luau")
+
 local M = {}
 
 M.RESULT_KEY = "nixos_updates"
@@ -60,7 +62,9 @@ end
 -- Opens a link in the default browser. Plugins get no activation token, so
 -- whether the browser window comes to the front is up to the compositor.
 function M.openUrl(url)
-	if url == nil or url == "" then
+	-- Checked again here: result.json is a file on disk, not only our output.
+	url = diff.safeUrl(url)
+	if url == nil then
 		return
 	end
 	local accepted = noctalia.runAsync({ "xdg-open", url }, function(r)
