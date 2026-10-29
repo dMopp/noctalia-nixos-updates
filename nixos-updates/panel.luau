@@ -131,9 +131,24 @@ function render()
 	for _, e in ipairs(result.errors or {}) do
 		table.insert(body, ui.label({ text = e.message, fontSize = 12, color = "error", maxLines = 4 }))
 	end
-	table.insert(body, ui.label({ text = view.status(result), fontSize = 12, color = "on_surface_variant" }))
 
-	if result.checkedAt ~= nil then
+	-- Nothing pending at all: one line instead of three empty sections.
+	local empty = result.checkedAt ~= nil and not result.running and #(result.errors or {}) == 0
+	for _, list in ipairs({ result.packages, result.flatpak, result.inputs }) do
+		if type(list) == "table" and #list > 0 then
+			empty = false
+		end
+	end
+	if empty then
+		table.insert(body, ui.row({ align = "center", gap = 8 }, {
+			ui.glyph({ name = "circle-check", size = 18, color = "primary" }),
+			ui.label({ text = view.status(result), fontSize = 13, color = "on_surface", flexGrow = 1 }),
+		}))
+	else
+		table.insert(body, ui.label({ text = view.status(result), fontSize = 12, color = "on_surface_variant" }))
+	end
+
+	if result.checkedAt ~= nil and not empty then
 		-- What the count above is made of comes first: package changes and
 		-- Flatpak updates, or the inputs when packages are not compared.
 		local packages = { "packages", "package", "panel.packages", result.packages, packageRow, true }
@@ -175,14 +190,16 @@ function render()
 		end
 	end
 
-	panel.render(ui.column({ flexGrow = 1, gap = 12 }, {
+	-- No scroll area and no flexGrow: at most PREVIEW rows fit anyway, and the
+	-- panel (height = "content") then takes only the height it needs.
+	panel.render(ui.column({ gap = 12 }, {
 		ui.row({ align = "center", justify = "space_between", gap = 8 }, {
 			ui.glyph({ name = "snowflake", size = 20, color = "primary" }),
 			ui.label({ text = noctalia.tr("panel.title"), fontSize = 16, fontWeight = "bold", color = "on_surface", flexGrow = 1 }),
 			ui.button({ glyph = "arrows-maximize", variant = "ghost", tooltip = noctalia.tr("panel.open_details"), onClick = openDetails }),
 			ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
 		}),
-		ui.scroll({ flexGrow = 1, gap = 10 }, body),
+		ui.column({ gap = 10 }, body),
 		ui.row({ align = "center", gap = 8 }, view.actions(result, function()
 			panel.close()
 		end)),
