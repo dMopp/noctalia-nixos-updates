@@ -107,13 +107,7 @@ local function packageRows()
 	local rows = {}
 	for _, pkg in ipairs(result.packages or {}) do
 		if matches(pkg.name, pkg.old, pkg.new) then
-			local info = ""
-			if pkg.old == "" then
-				info = noctalia.tr("details.added")
-			elseif pkg.new == "" then
-				info = noctalia.tr("details.removed")
-			end
-			table.insert(rows, tableRow("pkg-" .. pkg.name, #rows + 1, pkg.name, pkg.old, pkg.new, info))
+			table.insert(rows, tableRow("pkg-" .. pkg.name, #rows + 1, pkg.name, pkg.old, pkg.new, view.changeKind(pkg.old, pkg.new)))
 		end
 	end
 	return rows

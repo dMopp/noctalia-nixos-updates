@@ -35,6 +35,68 @@ function M.change(old, new)
 	return old .. "  →  " .. new
 end
 
+local function numbers(version)
+	local out = {}
+	for n in tostring(version):gmatch("%d+") do
+		table.insert(out, tonumber(n))
+	end
+	return out
+end
+
+local function split(list)
+	local set = {}
+	for v in tostring(list):gmatch("[^,%s]+") do
+		set[v] = true
+	end
+	return set
+end
+
+-- Kind of a package change for the details column: major, minor or patch
+-- from the first numeric component that differs, a downgrade, or the versions
+-- that disappear or appear when a package is installed in several versions.
+function M.changeKind(old, new)
+	if old == "" then
+		return noctalia.tr("details.added")
+	elseif new == "" then
+		return noctalia.tr("details.removed")
+	end
+	if old:find(",", 1, true) or new:find(",", 1, true) then
+		local before, after = split(old), split(new)
+		local gone, added = {}, {}
+		for v in pairs(before) do
+			if not after[v] then
+				table.insert(gone, v)
+			end
+		end
+		for v in pairs(after) do
+			if not before[v] then
+				table.insert(added, v)
+			end
+		end
+		table.sort(gone)
+		table.sort(added)
+		local parts = {}
+		if #added > 0 then
+			table.insert(parts, noctalia.tr("details.versions_added", { versions = table.concat(added, ", ") }))
+		end
+		if #gone > 0 then
+			table.insert(parts, noctalia.tr("details.versions_removed", { versions = table.concat(gone, ", ") }))
+		end
+		return table.concat(parts, " · ")
+	end
+	local a, b = numbers(old), numbers(new)
+	for i = 1, math.max(#a, #b) do
+		local x, y = a[i] or 0, b[i] or 0
+		if x ~= y then
+			if y < x then
+				return noctalia.tr("details.downgrade")
+			end
+			return noctalia.tr(i == 1 and "details.major" or i == 2 and "details.minor" or "details.patch")
+		end
+	end
+	return noctalia.tr("details.other")
+end
+
 function M.flatpakChange(fp)
 	if fp.new == "" then
 		return noctalia.tr("panel.new_commit")

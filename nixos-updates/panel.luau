@@ -2,11 +2,12 @@
 -- Panel: pending updates like `apt list --upgradable` - changed flake inputs
 -- with their revisions, the package versions that change with them, and
 -- Flatpak updates - plus buttons to check again and to run the update command.
--- Each section shows its first PREVIEW rows; the details window has them all.
+-- All sections together show at most PREVIEW rows, then one button opens
+-- the details window with everything.
 
 local view = require("./lib/view.luau")
 
-local PREVIEW = 6
+local PREVIEW = 8
 
 local result = noctalia.state.get(view.RESULT_KEY) or {}
 local expanded = { inputs = true, packages = true, flatpak = true }
@@ -65,10 +66,11 @@ local function flatpakRow(fp)
 	return row("fp-" .. fp.installation .. fp.app .. fp.branch, fp.name, meta, view.flatpakChange(fp))
 end
 
--- Collapsible section; nil when the check did not cover it.
-local function section(id, glyph, labelKey, rows, makeRow)
+-- Collapsible section; nil when the check did not cover it. Shows at most
+-- `budget` rows and returns how many it showed and whether it cut rows off.
+local function section(id, glyph, labelKey, rows, makeRow, budget)
 	if type(rows) ~= "table" then
-		return nil
+		return nil, 0, false
 	end
 	local open = expanded[id] and #rows > 0
 	local children = {
@@ -89,26 +91,18 @@ local function section(id, glyph, labelKey, rows, makeRow)
 			}),
 		}),
 	}
+	local shown = 0
 	if open then
+		shown = math.min(#rows, budget)
 		local list = {}
-		for i = 1, math.min(#rows, PREVIEW) do
+		for i = 1, shown do
 			table.insert(list, makeRow(rows[i]))
 		end
-		if #rows > PREVIEW then
-			table.insert(list, ui.button({
-				text = noctalia.tr("panel.more", { count = #rows - PREVIEW }),
-				glyph = "list-details",
-				fontSize = 12,
-				glyphSize = 12,
-				variant = "ghost",
-				controlSize = "sm",
-				contentAlign = "start",
-				onClick = openDetails,
-			}))
+		if shown > 0 then
+			table.insert(children, ui.column({ gap = 2 }, list))
 		end
-		table.insert(children, ui.column({ gap = 2 }, list))
 	end
-	return ui.column({ gap = 4 }, children)
+	return ui.column({ gap = 4 }, children), shown, open and shown < #rows
 end
 
 function render()
@@ -119,15 +113,31 @@ function render()
 	table.insert(body, ui.label({ text = view.status(result), fontSize = 12, color = "on_surface_variant" }))
 
 	if result.checkedAt ~= nil then
-		local sections = {
-			section("inputs", "snowflake", "panel.inputs", result.inputs, inputRow),
-			section("packages", "package", "panel.packages", result.packages, packageRow),
-			section("flatpak", "box", "panel.flatpak", result.flatpak, flatpakRow),
+		local kinds = {
+			{ "inputs", "snowflake", "panel.inputs", result.inputs, inputRow },
+			{ "packages", "package", "panel.packages", result.packages, packageRow },
+			{ "flatpak", "box", "panel.flatpak", result.flatpak, flatpakRow },
 		}
-		for i = 1, 3 do
-			if sections[i] ~= nil then
-				table.insert(body, sections[i])
+		local budget = PREVIEW
+		local truncated = false
+		for _, k in ipairs(kinds) do
+			local node, shown, cut = section(k[1], k[2], k[3], k[4], k[5], budget)
+			if node ~= nil then
+				table.insert(body, node)
+				budget -= shown
+				truncated = truncated or cut
 			end
+		end
+		if truncated then
+			table.insert(body, ui.button({
+				text = noctalia.tr("panel.show_all"),
+				glyph = "list-details",
+				fontSize = 12,
+				glyphSize = 12,
+				variant = "outline",
+				controlSize = "sm",
+				onClick = openDetails,
+			}))
 		end
 		if type(result.inputs) == "table" and type(result.packages) ~= "table" and #result.inputs > 0 then
 			table.insert(body, ui.label({ text = noctalia.tr("panel.no_package_list"), fontSize = 11, color = "on_surface_variant", maxLines = 3 }))
