@@ -23,6 +23,7 @@
     "no_lock": "No flake.lock in {dir}",
     "no_nix": "nix is not on PATH",
     "not_started": "Could not start the update check",
+    "open_failed": "Could not open the link",
     "step_failed": "{step} failed: {message}"
   },
   "notify": {

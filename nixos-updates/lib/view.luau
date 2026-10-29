@@ -57,9 +57,19 @@ function M.status(result)
 	return noctalia.trp("panel.pending", result.count, { time = M.clock(result.checkedAt) })
 end
 
+-- Opens a link in the default browser. Plugins get no activation token, so
+-- whether the browser window comes to the front is up to the compositor.
 function M.openUrl(url)
-	if url ~= nil and url ~= "" then
-		noctalia.runAsync({ "xdg-open", url })
+	if url == nil or url == "" then
+		return
+	end
+	local accepted = noctalia.runAsync({ "xdg-open", url }, function(r)
+		if r.exitCode ~= 0 then
+			noctalia.notifyError(noctalia.tr("errors.open_failed"), url)
+		end
+	end, 20000)
+	if not accepted then
+		noctalia.notifyError(noctalia.tr("errors.open_failed"), url)
 	end
 end
 
