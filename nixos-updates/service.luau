@@ -78,15 +78,14 @@ local function stamps()
 	}
 end
 
+-- Every listed row counts: an input with new commits is an update even when
+-- no package version changes (a package built from it can keep its version).
 local function count(r)
 	local n = 0
-	if type(r.packages) == "table" then
-		n += #r.packages
-	elseif type(r.inputs) == "table" then
-		n += #r.inputs
-	end
-	if type(r.flatpak) == "table" then
-		n += #r.flatpak
+	for _, list in ipairs({ r.packages, r.flatpak, r.inputs }) do
+		if type(list) == "table" then
+			n += #list
+		end
 	end
 	return n
 end

@@ -1,7 +1,7 @@
 --!nonstrict
--- Bar widget: glyph plus the number of pending updates (changed packages, or
--- changed flake inputs when packages are not evaluated, plus Flatpak
--- updates). Left-click opens the panel through the manifest action.
+-- Bar widget: glyph plus the number of pending updates (package changes,
+-- Flatpak updates and flake inputs with new commits). Left-click opens the
+-- panel through the manifest action.
 
 local RESULT_KEY = "nixos_updates"
 

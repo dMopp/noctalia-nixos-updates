@@ -149,7 +149,7 @@ local function flatpakRows()
 	return rows
 end
 
--- Same order as the compact panel: what the update count is made of first.
+-- Same order as the compact panel.
 local KINDS = {
 	{ id = "packages", glyph = "package", label = "details.packages", field = "packages", rows = packageRows },
 	{ id = "flatpak", glyph = "box", label = "details.flatpak", field = "flatpak", rows = flatpakRows },

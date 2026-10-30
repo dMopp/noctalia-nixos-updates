@@ -40,14 +40,10 @@
     "checking_step": "Suche nach Updates: {step} …",
     "flatpak": "Flatpak-Updates: {count}",
     "inputs": "Flake-Inputs mit neuen Commits: {count}",
-    "more_inputs": {
-      "one": "{count} weiterer Flake-Input · alle anzeigen",
-      "other": "{count} weitere Flake-Inputs · alle anzeigen"
-    },
     "more_updates": "{hidden} weitere · alle {count} Updates anzeigen",
     "never_checked": "Noch nicht geprüft",
     "new_commit": "neuer Build",
-    "no_package_list": "Paketversionen werden nicht verglichen (in den Einstellungen aus oder die Auswertung ist fehlgeschlagen), die Zahl oben ist daher die Anzahl geänderter Inputs.",
+    "no_package_list": "Paketversionen werden nicht verglichen (in den Einstellungen aus oder die Auswertung ist fehlgeschlagen).",
     "open_compare": "Commits zwischen beiden Revisionen öffnen",
     "open_details": "Vollständige Liste öffnen",
     "packages": "Paketänderungen: {count}",

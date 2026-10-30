@@ -50,7 +50,7 @@ Left-click the widget for the panel:
   dates.
 - **Check now** and **Update**.
 
-Updates (packages, Flatpaks) come first, the inputs that bring them after.
+Packages and Flatpaks come first, the inputs after.
 The compact panel shows at most eight rows in all; where it cuts the list, one
 button says how many updates are hidden and opens the details window
 ("9 more · show all 17 updates", the same count as above). The maximize
@@ -72,9 +72,11 @@ noctalia msg panel-toggle dmopp/nixos-updates:panel
 noctalia msg panel-toggle dmopp/nixos-updates:details
 ```
 
-The widget count is the number of package changes plus Flatpak updates; when
-package versions are not compared (turned off, or the evaluation failed), the
-number of changed inputs takes their place. Errors turn the glyph red and show
+The count is the number of listed rows: package changes, Flatpak updates and
+inputs with new commits. An input counts on its own because a package built
+from it can get new commits without a new version number, so it would not show
+up as a package change. A nixpkgs bump therefore counts as one more on top of
+the packages it changes. Errors turn the glyph red and show
 up in the tooltip and the panel.
 
 ## Settings

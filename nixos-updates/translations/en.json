@@ -40,14 +40,10 @@
     "checking_step": "Checking for updates: {step}…",
     "flatpak": "Flatpak updates: {count}",
     "inputs": "Flake inputs with new commits: {count}",
-    "more_inputs": {
-      "one": "{count} more flake input · show all",
-      "other": "{count} more flake inputs · show all"
-    },
     "more_updates": "{hidden} more · show all {count} updates",
     "never_checked": "Not checked yet",
     "new_commit": "new build",
-    "no_package_list": "Package versions are not compared (turned off in the settings or the evaluation failed), so the count above is the number of changed inputs.",
+    "no_package_list": "Package versions are not compared (turned off in the settings or the evaluation failed).",
     "open_compare": "Open the commits between both revisions",
     "open_details": "Open the full list",
     "packages": "Package changes: {count}",

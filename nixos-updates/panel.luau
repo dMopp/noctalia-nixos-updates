@@ -149,40 +149,31 @@ function render()
 	end
 
 	if result.checkedAt ~= nil and not empty then
-		-- What the count above is made of comes first: package changes and
-		-- Flatpak updates, or the inputs when packages are not compared.
-		local packages = { "packages", "package", "panel.packages", result.packages, packageRow, true }
-		local flatpak = { "flatpak", "box", "panel.flatpak", result.flatpak, flatpakRow, true }
-		local inputs = { "inputs", "snowflake", "panel.inputs", result.inputs, inputRow, false }
-		local kinds = { packages, flatpak, inputs }
-		if type(result.packages) ~= "table" then
-			inputs[6] = true
-			kinds = { inputs, flatpak }
-		end
+		local kinds = {
+			{ "packages", "package", "panel.packages", result.packages, packageRow },
+			{ "flatpak", "box", "panel.flatpak", result.flatpak, flatpakRow },
+			{ "inputs", "snowflake", "panel.inputs", result.inputs, inputRow },
+		}
 		local count = tonumber(result.count) or 0
 		local budget = PREVIEW
-		local shownCounted = 0
+		local shownTotal = 0
 		local buttonPlaced = false
 		for _, k in ipairs(kinds) do
-			-- One button where the list is cut first: with the updates still
-			-- hidden in the same unit as the count above, else the inputs.
-			local function more(hidden)
+			-- One button where the list is cut first; every row counts, so the
+			-- numbers add up to the count above.
+			local function more(_hidden)
 				if buttonPlaced then
 					return nil
 				end
 				buttonPlaced = true
-				if k[6] then
-					return moreButton(noctalia.tr("panel.more_updates", { hidden = count - shownCounted - math.min(#k[4], budget), count = count }))
-				end
-				return moreButton(noctalia.trp("panel.more_inputs", hidden))
+				local hidden = count - shownTotal - math.min(#k[4], budget)
+				return moreButton(noctalia.tr("panel.more_updates", { hidden = hidden, count = count }))
 			end
 			local node, shown = section(k[1], k[2], k[3], k[4], k[5], budget, more)
 			if node ~= nil then
 				table.insert(body, node)
 				budget -= shown
-				if k[6] then
-					shownCounted += shown
-				end
+				shownTotal += shown
 			end
 		end
 		if type(result.inputs) == "table" and type(result.packages) ~= "table" and #result.inputs > 0 then
