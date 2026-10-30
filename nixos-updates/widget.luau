@@ -68,6 +68,11 @@ local function render()
 		fill = config("highlight_color", "tertiary")
 	end
 	local foreground = fill ~= nil and "surface" or nil
+	-- The error color can be close to the update color in a wallpaper theme, so
+	-- an error also changes the glyph. A custom glyph has no crossed-out form.
+	if hasErrors then
+		name = name == "package" and "package-off" or "alert-triangle"
+	end
 
 	-- Separate keys: a dropped prop does not reset on a retained node, so badge
 	-- and plain state must not share nodes.

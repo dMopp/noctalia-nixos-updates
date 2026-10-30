@@ -86,8 +86,9 @@ inputs with new commits. An input counts on its own because a package built
 from it can get new commits without a new version number, so it would not show
 up as a package change. A nixpkgs bump therefore counts as one more on top of
 the packages it changes. While updates are pending the widget is a filled
-badge. Errors turn the badge to the error color and show up in the tooltip and
-the panel.
+badge. An error turns the badge to the error color and crosses out the glyph
+(`package-off`; with a custom glyph, `alert-triangle`), as both colors can be
+alike in a wallpaper theme. The reason shows up in the tooltip and the panel.
 
 ## Settings
 
