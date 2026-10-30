@@ -144,4 +144,11 @@ check("other remote no link", byName["com.other.App"].changes, nil)
 check("not in list falls back to id", byName["com.unknown.App"].name, "com.unknown.App")
 check("flatpak empty", #diff.flatpak("", ""), 0)
 
+-- pendingCount: a list is absent while its check is off or unavailable
+check("pending all", diff.pendingCount({ packages = { 1, 2 }, flatpak = { 1 }, inputs = { 1 } }), 4)
+check("pending without packages", diff.pendingCount({ flatpak = { 1 }, inputs = { 1, 2 } }), 3)
+check("pending without flatpak", diff.pendingCount({ packages = {}, inputs = { 1 } }), 1)
+check("pending only inputs", diff.pendingCount({ inputs = { 1 } }), 1)
+check("pending nothing", diff.pendingCount({}), 0)
+
 print(failed == 0 and "all tests passed" or (tostring(failed) .. " failed"))

@@ -5,6 +5,7 @@
 -- All sections together show at most PREVIEW rows, then one button opens
 -- the details window with everything.
 
+local diff = require("./lib/diff.luau")
 local view = require("./lib/view.luau")
 
 local PREVIEW = 8
@@ -133,12 +134,7 @@ function render()
 	end
 
 	-- Nothing pending at all: one line instead of three empty sections.
-	local empty = result.checkedAt ~= nil and not result.running and #(result.errors or {}) == 0
-	for _, list in ipairs({ result.packages, result.flatpak, result.inputs }) do
-		if type(list) == "table" and #list > 0 then
-			empty = false
-		end
-	end
+	local empty = result.checkedAt ~= nil and not result.running and #(result.errors or {}) == 0 and diff.pendingCount(result) == 0
 	if empty then
 		table.insert(body, ui.row({ align = "center", gap = 8 }, {
 			ui.glyph({ name = "circle-check", size = 18, color = "primary" }),

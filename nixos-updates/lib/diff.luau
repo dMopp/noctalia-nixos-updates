@@ -244,4 +244,19 @@ function M.flatpak(installedText, updatesText)
 	return rows
 end
 
+-- Every listed row counts: an input with new commits is an update even when
+-- no package version changes (a package built from it can keep its version).
+-- A list is absent while its check is off or unavailable, hence the lookup by
+-- name: ipairs over { r.packages, r.flatpak, r.inputs } would stop at that nil.
+function M.pendingCount(r)
+	local n = 0
+	for _, field in ipairs({ "packages", "flatpak", "inputs" }) do
+		local list = r[field]
+		if type(list) == "table" then
+			n += #list
+		end
+	end
+	return n
+end
+
 return M

@@ -95,22 +95,10 @@ local function stamps()
 	}
 end
 
--- Every listed row counts: an input with new commits is an update even when
--- no package version changes (a package built from it can keep its version).
-local function count(r)
-	local n = 0
-	for _, list in ipairs({ r.packages, r.flatpak, r.inputs }) do
-		if type(list) == "table" then
-			n += #list
-		end
-	end
-	return n
-end
-
 local function publish()
 	result.running = running
 	result.step = step
-	result.count = count(result)
+	result.count = diff.pendingCount(result)
 	result.hasUpdateCommand = noctalia.string.trim(tostring(config("update_command", ""))) ~= ""
 	noctalia.state.set(RESULT_KEY, result)
 end
@@ -216,7 +204,7 @@ local function collect()
 	end
 
 	result = fresh
-	result.count = count(result)
+	result.count = diff.pendingCount(result)
 	result.keys = updateKeys(result)
 	notifyNew(previousKeys)
 	save()
