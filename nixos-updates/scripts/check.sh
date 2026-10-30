@@ -3,7 +3,7 @@
 # the updated lock file goes to the plugin data directory, flake.lock and the
 # installed Flatpaks stay as they are.
 #
-#   check.sh <out_dir> <flake_dir> <nixos_configuration> <packages 0|1> <flatpak 0|1>
+#   check.sh <out_dir> <flake_dir> <nixos_configuration> <packages 0|1> <flatpak 0|1> [<token_file>]
 #
 # Prints one line per event for the service (runStream has no exit callback):
 #   step <name>             a step starts
@@ -23,6 +23,8 @@ dir=$2
 cfg=$3
 packages=$4
 flatpak=$5
+tokenfile=${6:-}
+token=""
 
 err="$out/stderr"
 rc=0
@@ -70,6 +72,82 @@ fail() {
 	printf 'fail %s %s\n' "$1" "$(grep -v '^warning:' "$err" | tail -n 3 | tr '\n\t' '  ' | tr -d '\000-\037\177' | cut -c1-500)"
 }
 
+# Reads the optional GitHub token, refusing anything that could leak it or
+# smuggle in settings: it must be the user's own file, readable by nobody else,
+# outside the flake (Nix copies flake directories to the world-readable store),
+# and a single token of plain characters (it ends up in a Nix config, where a
+# line break would start a new setting). A refusal is reported by a code only.
+load_token() {
+	[ -n "$tokenfile" ] || return 0
+	if [ ! -f "$tokenfile" ]; then
+		echo "fail token missing"
+		return 0
+	fi
+	if [ -n "$dir" ]; then
+		case "$(readlink -f "$tokenfile")" in
+		"$(readlink -f "$dir")"/*)
+			echo "fail token in-flake"
+			return 0
+			;;
+		esac
+	fi
+	if [ "$(stat -L -c %u "$tokenfile")" != "$(id -u)" ]; then
+		echo "fail token owner"
+		return 0
+	fi
+	case "$(stat -L -c %a "$tokenfile")" in
+	400 | 600) ;;
+	*)
+		echo "fail token mode"
+		return 0
+		;;
+	esac
+	value=$(head -n 1 "$tokenfile" | tr -d '\r')
+	case "$value" in
+	"" | *[!A-Za-z0-9_]*)
+		echo "fail token format"
+		return 0
+		;;
+	esac
+	if [ "${#value}" -gt 255 ]; then
+		echo "fail token format"
+		return 0
+	fi
+	token=$value
+}
+
+# nix flake update, with the token if there is one. The token goes through the
+# environment of this one process, never onto a command line (where every user
+# could read it with ps), and in a subshell, so the evaluations below, which run
+# code of revisions not accepted yet, never get it.
+update_lock() {
+	(
+		if [ -n "$token" ]; then
+			NIX_CONFIG="${NIX_CONFIG:+$NIX_CONFIG
+}extra-access-tokens = github.com=$token"
+			export NIX_CONFIG
+		fi
+		run_nix 10 flake update --flake "$dir" --output-lock-file "$out/new.lock" >/dev/null 2>"$err"
+	)
+	rc=$?
+	return "$rc"
+}
+
+# Nix keeps going when it cannot ask an input for its latest revision: it warns,
+# uses what it knew before and exits with 0. Then the new lock proves nothing,
+# so this counts as a failure. By code, as the raw message contains the IP.
+stale_lock() {
+	grep -q 'unable to download' "$err" || return 1
+	if grep -q 'rate limit' "$err"; then
+		echo "fail lock rate-limit"
+	elif grep -q 'HTTP error 401' "$err"; then
+		echo "fail lock bad-token"
+	else
+		echo "fail lock stale"
+	fi
+	return 0
+}
+
 # Name, version, changelog and homepage of each package; entries that fail to
 # evaluate (broken, unfree without permission) are skipped instead of failing
 # the whole list, a missing changelog or homepage just stays "".
@@ -101,11 +179,14 @@ evaluate() {
 
 if [ -n "$dir" ]; then
 	echo "step lock"
+	load_token
 	rm -f "$out/new.lock" "$out/packages-old.json" "$out/packages-new.json"
 	if [ ! -f "$dir/flake.lock" ]; then
 		echo "fail lock no-lock"
-	elif ! run_nix 10 flake update --flake "$dir" --output-lock-file "$out/new.lock" >/dev/null 2>"$err"; then
+	elif ! update_lock; then
 		fail lock
+	elif stale_lock; then
+		:
 	elif [ "$packages" = 1 ]; then
 		[ -n "$cfg" ] || cfg=$(cat /proc/sys/kernel/hostname)
 		echo "step eval-old"

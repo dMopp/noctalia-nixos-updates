@@ -12,7 +12,7 @@ license = "MIT"
 icon = "snowflake"
 description = "Pending flake input, package and Flatpak updates on NixOS, like apt list --upgradable."
 tags = ["bar", "panel", "service", "system", "nixos", "indicator"]
-dependencies = ["nix", "sh", "timeout", "cat", "cmp", "cp", "cut", "grep", "mv", "rm", "sed", "tail", "tr", "flatpak", "xdg-open"]
+dependencies = ["nix", "sh", "timeout", "cat", "cmp", "cp", "cut", "grep", "head", "id", "mv", "readlink", "rm", "sed", "stat", "tail", "tr", "flatpak", "xdg-open"]
 
 [[setting]]
 key = "flake_dir"
@@ -56,6 +56,13 @@ key = "update_command"
 type = "string"
 label_key = "settings.update_command.label"
 description_key = "settings.update_command.description"
+default = ""
+
+[[setting]]
+key = "github_token_file"
+type = "file"
+label_key = "settings.github_token_file.label"
+description_key = "settings.github_token_file.description"
 default = ""
 
 [[setting]]

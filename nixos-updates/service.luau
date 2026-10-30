@@ -59,6 +59,12 @@ local function flakeDir()
 	return (noctalia.expandPath(dir):gsub("/+$", ""))
 end
 
+-- Only ever the path: the token stays in its file, and settings may be exported.
+local function tokenFile()
+	local path = noctalia.string.trim(tostring(config("github_token_file", "")))
+	return path ~= "" and noctalia.expandPath(path) or ""
+end
+
 -- Nix reads the directory as a flake reference: anything but an absolute path
 -- without ? and # would mean another flake (a registry name, a URL parameter).
 local function validFlakeDir(dir)
@@ -150,6 +156,10 @@ end
 local function stepError(name, message)
 	if name == "lock" and message == "no-lock" then
 		return noctalia.tr("errors.no_lock", { dir = flakeDir() })
+	elseif name == "lock" and (message == "rate-limit" or message == "stale" or message == "bad-token") then
+		return noctalia.tr("errors.lock_" .. message:gsub("%-", "_"))
+	elseif name == "token" then
+		return noctalia.tr("errors.token_" .. message:gsub("%-", "_"), { path = tokenFile() })
 	end
 	return noctalia.tr("errors.step_failed", { step = noctalia.tr("steps." .. name), message = message })
 end
@@ -261,6 +271,7 @@ local function check()
 		quote(noctalia.string.trim(tostring(config("nixos_configuration", "")))),
 		config("check_packages", true) == true and "1" or "0",
 		config("check_flatpak", true) == true and "1" or "0",
+		quote(tokenFile()),
 	}, " ")
 
 	running = true

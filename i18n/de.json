@@ -23,12 +23,20 @@
   "errors": {
     "bad_flake_dir": "Das Flake-Verzeichnis muss ein absoluter Pfad ohne ? und # sein: {dir}",
     "bad_result": "Die Prüfung ist fertig, ihre Ergebnisse konnten aber nicht gelesen werden",
+    "lock_bad_token": "GitHub hat den Token abgelehnt (abgelaufen oder widerrufen?). Erstelle einen neuen oder leere die Einstellung zur Token-Datei.",
+    "lock_rate_limit": "GitHubs API-Limit ist erreicht, Updates konnten nicht geprüft werden. Die Liste zeigt den letzten bekannten Stand. Das Limit wird innerhalb einer Stunde zurückgesetzt; ein Token (siehe Einstellungen) hebt es an.",
+    "lock_stale": "Nicht jeder Flake-Input konnte nach seinem neuesten Stand gefragt werden (kein Netz?). Die Liste zeigt den letzten bekannten Stand.",
     "no_flake": "Keine flake.nix in {dir}",
     "no_lock": "Keine flake.lock in {dir}",
     "no_nix": "nix ist nicht im PATH",
     "not_started": "Update-Prüfung konnte nicht gestartet werden",
     "open_failed": "Link konnte nicht geöffnet werden",
-    "step_failed": "{step} fehlgeschlagen: {message}"
+    "step_failed": "{step} fehlgeschlagen: {message}",
+    "token_format": "Die erste Zeile der Token-Datei ist kein GitHub-Token. Nicht verwendet: {path}",
+    "token_in_flake": "Die Token-Datei liegt im Flake-Verzeichnis, von dort könnte Nix sie in den für alle lesbaren Store kopieren. Nicht verwendet: {path}",
+    "token_missing": "Token-Datei nicht gefunden: {path}. Es wird ohne Token geprüft.",
+    "token_mode": "Andere Benutzer könnten die Token-Datei lesen. Nicht verwendet, bis du chmod 600 darauf ausführst: {path}",
+    "token_owner": "Die Token-Datei gehört einem anderen Benutzer. Nicht verwendet: {path}"
   },
   "notify": {
     "body": {
@@ -78,6 +86,10 @@
       "description": "Verzeichnis mit flake.nix und flake.lock, als absoluter Pfad. Wird nicht beschrieben; die aktualisierte Lock-Datei landet im Datenverzeichnis des Plugins. Leer: nur Flatpaks.",
       "label": "Flake-Verzeichnis"
     },
+    "github_token_file": {
+      "label": "GitHub-Token-Datei (optional)",
+      "description": "Nur nötig, wenn du GitHubs Limit von 60 Anfragen pro Stunde erreichst. Pfad zu einer Datei mit einem Token ohne Berechtigungen, chmod 600, außerhalb des Flake-Verzeichnisses. Die README zeigt, wie du ihn erstellst. Füge hier nie den Token selbst ein."
+    },
     "glyph": {
       "label": "Symbol"
     },
@@ -115,7 +127,8 @@
     "eval-new": "aktualisierte Konfiguration auswerten",
     "eval-old": "aktuelle Konfiguration auswerten",
     "flatpak": "Flatpak",
-    "lock": "Flake-Update"
+    "lock": "Flake-Update",
+    "token": "Token-Datei lesen"
   },
   "widget": {
     "checked": "Geprüft",

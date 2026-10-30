@@ -22,8 +22,9 @@ the panel's **Update** button.
 - `nix` with flakes (the plugin passes `--extra-experimental-features "nix-command flakes"`
   itself) and support for `nix flake update --output-lock-file` and
   `nix eval --reference-lock-file`. Tested with Nix 2.34.
-- `sh`, `timeout`, `cat`, `cmp`, `cp`, `cut`, `grep`, `mv`, `rm`, `sed`, `tail`,
-  `tr` (a shell, coreutils, diffutils, grep, sed).
+- `sh`, `timeout`, `cat`, `cmp`, `cp`, `cut`, `grep`, `head`, `id`, `mv`,
+  `readlink`, `rm`, `sed`, `stat`, `tail`, `tr` (a shell, coreutils, diffutils,
+  grep, sed).
 - Optional: `flatpak` for the Flatpak list; without it that section is left out.
 - Optional: `xdg-open` to open changelogs and commit comparisons from the panels.
 
@@ -100,6 +101,7 @@ Plugin settings:
 | `check_flatpak` | `bool` | `true` | List pending Flatpak updates of the system and user installations. |
 | `check_interval_hours` | `int` | `6` | Hours between two checks (1-168). After a failed check at most 15 minutes. |
 | `update_command` | `string` | `""` | Shell command for the **Update** button, run in a terminal when you press it, never on its own. Empty: the button opens the settings instead. |
+| `github_token_file` | `file` | `""` | Optional. Path to a file with a GitHub token, see [GitHub rate limit](#github-rate-limit). The token itself never goes into the settings. |
 | `notify` | `bool` | `true` | Notify when a check finds updates that were not pending before. |
 | `ignored_inputs` | `string_list` | `[]` | Advanced. Input names left out of the input list. Packages they change are still listed. |
 
@@ -112,6 +114,77 @@ Widget settings:
 | `show_zero` | `bool` | `false` | Show `0` when up to date |
 | `hide_when_up_to_date` | `bool` | `false` | Hide the widget while nothing is pending and there is no error |
 | `highlight_color` | `color` | `tertiary` | Background of the badge while updates are pending (errors: `error`) |
+
+## GitHub rate limit
+
+`nix flake update` asks GitHub's API for the latest revision of each `github:`
+input. Without a token GitHub allows 60 requests per hour per IP address, shared
+by everything in your network. One check costs about one request per direct
+input, so the default interval is far from the limit; it can be reached with
+many checks in a row or other Nix use on the same address.
+
+Nix does not fail then: it warns and reuses what it knew. The plugin treats this
+as a failed check, shows the reason, keeps the last known lists and tries again
+every 15 minutes. It does not claim "up to date" from old data. Note that a
+plain `nix flake update` or your update command is affected the same way while
+the limit is reached: it can finish without updating anything.
+
+A token raises the limit to 5000 requests per hour. It is optional, and you do
+not need one if you never see the error.
+
+### Creating a token
+
+Give it no access beyond what is public anyway, so that it is worth little if it
+ever leaks:
+
+1. Open [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)
+   (a **fine-grained** token).
+2. **Token name:** for example `noctalia-nixos-updates`. **Expiration:** keep it
+   short, for example 90 days. The plugin tells you when GitHub rejects it.
+3. **Resource owner:** your account. **Repository access:** **Public
+   repositories**. Do not select private repositories: this plugin does not need
+   them, and if your flake has private inputs, a separate token for those belongs
+   in your own Nix setup.
+4. **Permissions:** add none. Read access to public repositories is always
+   included.
+5. **Generate token** and copy it. GitHub shows it only once.
+
+Store it with these commands. `read -rs` keeps it out of your shell history and
+off the screen; paste it and press Enter:
+
+```sh
+install -d -m 700 ~/.config/noctalia-nixos-updates
+(umask 077; IFS= read -rs token && printf '%s\n' "$token" > ~/.config/noctalia-nixos-updates/github-token)
+```
+
+Then set **GitHub token file** to `~/.config/noctalia-nixos-updates/github-token`.
+
+Check that it works; this should print a limit of 5000. The token reaches `curl`
+through stdin and stays off the command line:
+
+```sh
+printf 'header = "Authorization: Bearer %s"\n' "$(cat ~/.config/noctalia-nixos-updates/github-token)" | curl -s -K - https://api.github.com/rate_limit | grep -m1 '"limit"'
+```
+
+To remove it, delete the token on GitHub (same settings page), delete the file
+and clear the setting.
+
+Do not put the token into your NixOS configuration, `nix.settings` or anywhere
+inside the flake: those end up in the Nix store, which every user can read.
+
+### How the plugin handles the token
+
+- Only the path is in the settings; the token stays out of `settings.toml` and
+  anything exported from it.
+- The file is refused, with a message and without being used, unless it is your
+  own, has mode `600` or `400`, lies outside `flake_dir`, and its first line
+  consists only of letters, digits and `_`. So it cannot add other Nix settings.
+- It reaches only `nix flake update`, through that process's environment
+  (`NIX_CONFIG`, `extra-access-tokens`), which other users cannot read, and never
+  a command line. The evaluation of not yet accepted code (see Notes) runs
+  without it.
+- Nix sends it only to `github.com` and its API. It is not written to the plugin's
+  files, not logged, and not sent anywhere by the plugin itself.
 
 ## IPC
 
@@ -162,7 +235,8 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
 - **CPU:** an evaluation of the NixOS configuration takes a few seconds to a
   minute, depending on the configuration; Nix's own caches make it much
   cheaper when neither the lock nor the configuration changed.
-- **Files read:** `<flake_dir>` through `nix`, directly `flake.lock`, and
+- **Files read:** `<flake_dir>` through `nix`, directly `flake.lock`, the
+  optional token file, and
   `/var/lib/flatpak/.changed` and `~/.local/share/flatpak/.changed` (modification
   time only).
 - **Files written:** by the plugin only in its data directory
