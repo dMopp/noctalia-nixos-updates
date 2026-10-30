@@ -55,23 +55,19 @@ apply='c: let
   kernel = builtins.tryEval c.boot.kernelPackages.kernel;
 in builtins.concatMap pkg (c.environment.systemPackages ++ (if kernel.success then [ kernel.value ] else [ ]))'
 
-# Evaluates the package list for one lock file into $2, unless the lock is the
-# same as on the last evaluation ($2.v3.lock keeps a copy of it; the v3 marks
-# the result format, so results in an older format are evaluated again).
+# Evaluates the package list for one lock file into $2. Always both sides with
+# the configuration as it is now, so that an edit of the configuration never
+# looks like an update; Nix's own caches keep this cheap when nothing changed.
 evaluate() {
 	lock=$1
 	result=$2
-	if [ -s "$result" ] && cmp -s "$lock" "$result.v3.lock"; then
-		return 0
-	fi
 	# shellcheck disable=SC2086
 	if limit 15 nix $nixflags eval --json --no-write-lock-file --reference-lock-file "$lock" \
 		"$dir#nixosConfigurations.\"$cfg\".config" --apply "$apply" >"$result.tmp" 2>"$err"; then
 		mv "$result.tmp" "$result"
-		cp "$lock" "$result.v3.lock"
 		return 0
 	fi
-	rm -f "$result.tmp" "$result" "$result.v3.lock"
+	rm -f "$result.tmp" "$result"
 	return 1
 }
 
@@ -91,7 +87,6 @@ if [ -n "$dir" ]; then
 		elif cmp -s "$dir/flake.lock" "$out/new.lock"; then
 			# Nothing to update: same lock, same packages.
 			cp "$out/packages-old.json" "$out/packages-new.json"
-			cp "$out/new.lock" "$out/packages-new.json.v3.lock"
 		else
 			echo "step eval-new"
 			evaluate "$out/new.lock" "$out/packages-new.json" || fail eval-new

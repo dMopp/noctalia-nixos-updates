@@ -43,7 +43,8 @@ updated) triggers a new check about 20 seconds later.
 Left-click the widget for the panel:
 
 - **Package changes**: every entry of `environment.systemPackages` plus the
-  kernel whose version changes, appears or disappears.
+  kernel whose version changes, appears or disappears. Packages are told apart
+  by name, so a renamed one shows up as removed plus new.
 - **Flatpak updates**: system and user installation, installed and new
   version (runtimes without a version show "new build").
 - **Flake inputs with new commits**: old and new revision, source and commit
@@ -122,9 +123,9 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
      reads name, version, `meta.changelog` and `meta.homepage` of every
      `environment.systemPackages` entry and of
      `boot.kernelPackages.kernel`, once with `flake.lock` and once with
-     `new.lock`. Nothing is built. Each result is cached with a copy of its
-     lock and only evaluated again when that lock changed; when both locks are
-     equal the second evaluation is skipped.
+     `new.lock`, both with the configuration as it is at that moment, so that an
+     edit of the configuration does not look like an update. Nothing is built.
+     When both locks are equal the second evaluation is skipped.
   3. `flatpak list` (with origin, for the Flathub link) and
      `flatpak remote-ls --system|--user --updates`.
 
@@ -141,14 +142,14 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
   `flatpak remote-ls` fetches the remotes' metadata. The plugin itself makes no
   HTTP requests. Nothing runs while `shell.offline_mode` is on.
 - **CPU:** an evaluation of the NixOS configuration takes a few seconds to a
-  minute, depending on the configuration; with the cache above that happens
-  only when a lock changed.
+  minute, depending on the configuration; Nix's own caches make it much
+  cheaper when neither the lock nor the configuration changed.
 - **Files read:** `<flake_dir>/flake.nix` and `flake.lock` (through `nix`),
   `/var/lib/flatpak/.changed` and `~/.local/share/flatpak/.changed` (modification
   time only).
 - **Files written:** only in the plugin data directory
   (`noctalia.pluginDataDir()`): `new.lock`, `packages-old.json`,
-  `packages-new.json` with their `.v3.lock` copies, `flatpak-installed.tsv`,
+  `packages-new.json`, `flatpak-installed.tsv`,
   `flatpak-updates.tsv`, and `result.json` with the last result.
 - **Processes:** `sh scripts/check.sh` (with the `nix` and `flatpak` calls
   above), `xdg-open <url>` on a click on a row with a changes link, and the

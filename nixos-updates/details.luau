@@ -123,7 +123,9 @@ local function packageRows()
 	for _, pkg in ipairs(result.packages or {}) do
 		if matches(pkg.name, pkg.old, pkg.new) then
 			local labelKey = pkg.changesKind == "releases" and "details.link_releases" or "details.link_changelog"
-			table.insert(rows, tableRow("pkg-" .. pkg.name, #rows + 1, pkg.name, pkg.old, pkg.new, pkg.changes, labelKey, "details.no_changelog"))
+			local old = pkg.kind == "added" and noctalia.tr("details.not_installed") or pkg.old
+			local new = pkg.kind == "removed" and noctalia.tr("details.removed") or pkg.new
+			table.insert(rows, tableRow("pkg-" .. pkg.name, #rows + 1, pkg.name, old, new, pkg.changes, labelKey, "details.no_changelog"))
 		end
 	end
 	return rows

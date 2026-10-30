@@ -161,27 +161,28 @@ local function changesUrl(m)
 	return nil, nil
 end
 
--- Packages whose version changes, appears or disappears. old/new are "" for
--- added/removed ones; the changes link comes from the new side, for removed
--- packages from the old one, and is nil when there is none.
+-- Packages whose version changes, appears or disappears; kind says which
+-- ("changed", "added", "removed"), old/new are "" on the side that is missing.
+-- The changes link comes from the new side, for removed packages from the old
+-- one, and is nil when there is none.
 function M.packages(oldList, newList)
 	local old, oldMeta = versions(oldList)
 	local new, newMeta = versions(newList)
 	local rows = {}
-	local function add(name, o, n)
-		local url, kind = changesUrl(newMeta[name] or oldMeta[name] or {})
-		table.insert(rows, { name = name, old = o, new = n, changes = url, changesKind = kind })
+	local function add(name, kind, o, n, meta)
+		local url, urlKind = changesUrl(meta)
+		table.insert(rows, { name = name, kind = kind, old = o, new = n, changes = url, changesKind = urlKind })
 	end
-	local seen = {}
 	for name, v in pairs(old) do
-		seen[name] = true
-		if new[name] ~= v then
-			add(name, v, new[name] or "")
+		if new[name] == nil then
+			add(name, "removed", v, "", oldMeta[name])
+		elseif new[name] ~= v then
+			add(name, "changed", v, new[name], newMeta[name])
 		end
 	end
 	for name, v in pairs(new) do
-		if not seen[name] then
-			add(name, "", v)
+		if old[name] == nil then
+			add(name, "added", "", v, newMeta[name])
 		end
 	end
 	table.sort(rows, function(a, b)

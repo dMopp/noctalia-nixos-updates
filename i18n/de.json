@@ -14,8 +14,10 @@
     "no_changelog": "Kein Changelog",
     "no_compare": "Kein Vergleich verfügbar",
     "no_match": "Keine Treffer für die Suche.",
+    "not_installed": "nicht installiert",
     "nothing": "Nichts zu aktualisieren.",
     "packages": "Pakete ({count})",
+    "removed": "entfernt",
     "search": "Nach Name oder Version suchen"
   },
   "errors": {
