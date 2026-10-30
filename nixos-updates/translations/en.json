@@ -82,7 +82,7 @@
       "label": "Hide when up to date"
     },
     "highlight_color": {
-      "label": "Glyph color with updates"
+      "label": "Badge color with updates"
     },
     "ignored_inputs": {
       "description": "Flake input names to leave out of the input list, for example ones you update on your own schedule.",

@@ -82,7 +82,7 @@
       "label": "Ausblenden wenn aktuell"
     },
     "highlight_color": {
-      "label": "Symbolfarbe bei Updates"
+      "label": "Plakettenfarbe bei Updates"
     },
     "ignored_inputs": {
       "description": "Namen von Flake-Inputs, die in der Input-Liste fehlen sollen, z. B. solche, die du nach eigenem Plan aktualisierst.",

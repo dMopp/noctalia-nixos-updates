@@ -50,21 +50,42 @@ local function render()
 	local hasErrors = #(result.errors or {}) > 0
 	barWidget.setVisible(n > 0 or hasErrors or result.running or config("hide_when_up_to_date", false) ~= true)
 
-	local glyph = tostring(config("glyph", "package"))
-	barWidget.setGlyph(glyph ~= "" and glyph or "package")
-	if n > 0 then
-		barWidget.setGlyphColor(config("highlight_color", "primary"))
-	elseif hasErrors then
-		barWidget.setGlyphColor("error")
-	else
-		barWidget.setGlyphColor("on_surface")
+	local name = tostring(config("glyph", "package"))
+	if name == "" then
+		name = "package"
 	end
-
 	local text = ""
 	if config("show_count", true) == true and (n > 0 or config("show_zero", false) == true) then
 		text = tostring(n)
 	end
-	barWidget.setText(text)
+
+	-- Pending updates or an error: a filled badge. Accent colors of a wallpaper
+	-- theme are too alike for a mere text color to stand out in the bar.
+	local fill = nil
+	if hasErrors then
+		fill = "error"
+	elseif n > 0 then
+		fill = config("highlight_color", "tertiary")
+	end
+	local foreground = fill ~= nil and "surface" or nil
+
+	-- Separate keys: a dropped prop does not reset on a retained node, so badge
+	-- and plain state must not share nodes.
+	local state = fill ~= nil and "badge" or "plain"
+	local parts = { ui.glyph({ key = state .. "-glyph", name = name, color = foreground }) }
+	if text ~= "" then
+		table.insert(parts, ui.label({ key = state .. "-label", text = text, color = foreground, fontWeight = fill ~= nil and "bold" or nil }))
+	end
+	local container = barWidget.isVertical() and ui.column or ui.row
+	barWidget.render(container({
+		key = state,
+		gap = 4,
+		align = "center",
+		fill = fill,
+		radius = fill ~= nil and 8 or nil,
+		paddingH = fill ~= nil and 7 or nil,
+		paddingV = fill ~= nil and 2 or nil,
+	}, parts))
 	barWidget.setTooltip(tooltip())
 end
 

@@ -110,7 +110,7 @@ entry = "widget.luau"
   key = "highlight_color"
   type = "color"
   label_key = "settings.highlight_color.label"
-  default = "primary"
+  default = "tertiary"
 
 [[panel]]
 id = "panel"

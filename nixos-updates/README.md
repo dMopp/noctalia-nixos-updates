@@ -102,7 +102,7 @@ Widget settings:
 | `show_count` | `bool` | `true` | Show the number of updates |
 | `show_zero` | `bool` | `false` | Show `0` when up to date |
 | `hide_when_up_to_date` | `bool` | `false` | Hide the widget while nothing is pending and there is no error |
-| `highlight_color` | `color` | `primary` | Glyph color while updates are pending |
+| `highlight_color` | `color` | `tertiary` | Background of the badge while updates are pending (errors: `error`) |
 
 ## IPC
 
