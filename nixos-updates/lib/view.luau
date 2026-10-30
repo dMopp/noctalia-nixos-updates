@@ -44,6 +44,18 @@ function M.flatpakChange(fp)
 	return M.change(fp.old, fp.new)
 end
 
+-- True when a step of the last check failed, so that "nothing pending" would
+-- claim more than is known. A refused token is not such a step: the check runs
+-- without one.
+function M.incomplete(result)
+	for _, e in ipairs(result.errors or {}) do
+		if e.step ~= "token" then
+			return true
+		end
+	end
+	return false
+end
+
 -- One line under the title: running step, last check, or "never".
 function M.status(result)
 	if result.running then
@@ -54,6 +66,9 @@ function M.status(result)
 	elseif result.checkedAt == nil then
 		return noctalia.tr("panel.never_checked")
 	elseif (tonumber(result.count) or 0) == 0 then
+		if M.incomplete(result) then
+			return noctalia.tr("panel.check_incomplete", { time = M.clock(result.checkedAt) })
+		end
 		return noctalia.tr("panel.up_to_date", { time = M.clock(result.checkedAt) })
 	end
 	return noctalia.trp("panel.pending", result.count, { time = M.clock(result.checkedAt) })

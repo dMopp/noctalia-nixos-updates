@@ -16,6 +16,7 @@
     "no_match": "Nothing matches the search.",
     "not_installed": "not installed",
     "nothing": "Nothing to update.",
+    "incomplete": "Nothing to show: the check did not complete.",
     "packages": "Packages ({count})",
     "removed": "removed",
     "search": "Search by name or version"
@@ -67,6 +68,7 @@
     "set_update_command": "Set update command",
     "title": "NixOS Updates",
     "up_to_date": "Everything is up to date · checked {time}",
+    "check_incomplete": "Check did not complete · tried {time}",
     "update": "Update"
   },
   "settings": {
@@ -127,8 +129,7 @@
     "eval-new": "evaluating the updated configuration",
     "eval-old": "evaluating the current configuration",
     "flatpak": "Flatpak",
-    "lock": "flake update",
-    "token": "reading the token file"
+    "lock": "flake update"
   },
   "widget": {
     "checked": "Checked",

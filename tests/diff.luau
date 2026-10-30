@@ -144,6 +144,19 @@ check("other remote no link", byName["com.other.App"].changes, nil)
 check("not in list falls back to id", byName["com.unknown.App"].name, "com.unknown.App")
 check("flatpak empty", #diff.flatpak("", ""), 0)
 
+-- credentials in an input URL stay out of what is shown
+local function tarball(url, hash)
+	return { root = "root", nodes = {
+		root = { inputs = { t = "t" } },
+		t = { locked = { type = "tarball", url = url, narHash = hash }, original = { type = "tarball", url = "https://u:SECRET@host.example/x.tar.gz?token=SECRET" } },
+	} }
+end
+local secret = diff.inputs(tarball("https://u:SECRET@host.example/a.tar.gz", "1"), tarball("https://u:SECRET@host.example/b.tar.gz", "2"), {})[1]
+check("no credentials in old rev", secret.oldRev:find("SECRET"), nil)
+check("no credentials in new rev", secret.newRev:find("SECRET"), nil)
+check("no credentials in source", secret.source, "https://host.example/x.tar.gz")
+local release = diff.inputs(tarball("https://r.example/nixos/25.05/nixos-25.05.1/nixexprs.tar.xz", "1"), tarball("https://r.example/nixos/25.05/nixos-25.05.2/nixexprs.tar.xz", "2"), {})[1]
+check("release name stays", release.newRev, "nixos-25.05.2")
 -- pendingCount: a list is absent while its check is off or unavailable
 check("pending all", diff.pendingCount({ packages = { 1, 2 }, flatpak = { 1 }, inputs = { 1 } }), 4)
 check("pending without packages", diff.pendingCount({ flatpak = { 1 }, inputs = { 1, 2 } }), 3)

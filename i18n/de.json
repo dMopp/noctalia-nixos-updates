@@ -16,6 +16,7 @@
     "no_match": "Keine Treffer für die Suche.",
     "not_installed": "nicht installiert",
     "nothing": "Nichts zu aktualisieren.",
+    "incomplete": "Nichts anzuzeigen: Die Prüfung wurde nicht abgeschlossen.",
     "packages": "Pakete ({count})",
     "removed": "entfernt",
     "search": "Nach Name oder Version suchen"
@@ -67,6 +68,7 @@
     "set_update_command": "Update-Befehl festlegen",
     "title": "NixOS-Updates",
     "up_to_date": "Alles aktuell · geprüft {time}",
+    "check_incomplete": "Prüfung nicht abgeschlossen · versucht {time}",
     "update": "Aktualisieren"
   },
   "settings": {
@@ -127,8 +129,7 @@
     "eval-new": "aktualisierte Konfiguration auswerten",
     "eval-old": "aktuelle Konfiguration auswerten",
     "flatpak": "Flatpak",
-    "lock": "Flake-Update",
-    "token": "Token-Datei lesen"
+    "lock": "Flake-Update"
   },
   "widget": {
     "checked": "Geprüft",

@@ -14,8 +14,9 @@ local RESULT_KEY = "nixos_updates"
 local COMMAND_KEY = "nixos_updates_command"
 -- A check that has not finished after this long is given up (the stream has
 -- no exit callback, so a killed script would otherwise block every check).
--- Longer than check.sh can run (its calls have time limits, 49 minutes in
--- all), so no two runs overlap; plugins cannot stop a stream themselves.
+-- Longer than check.sh can run (its nix and flatpak calls have time limits, 52
+-- minutes in all), so no two runs overlap; plugins cannot stop a stream
+-- themselves.
 local STALE_RUN_S = 60 * 60
 -- Wait this long after flake.lock or a Flatpak installation changed before
 -- checking again, so an update in progress can finish.
@@ -190,7 +191,7 @@ local function collect()
 	if sameFlake and failed.lock then
 		fresh.inputs = previous.inputs
 	end
-	if sameFlake and (failed.lock or failed["eval-old"] or failed["eval-new"]) then
+	if config("check_packages", true) == true and sameFlake and (failed.lock or failed["eval-old"] or failed["eval-new"]) then
 		fresh.packages = previous.packages
 	end
 

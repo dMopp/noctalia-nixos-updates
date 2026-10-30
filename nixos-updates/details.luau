@@ -203,7 +203,7 @@ function render()
 		end
 	end
 	if shown == 0 and result.checkedAt ~= nil then
-		local key = query ~= "" and "details.no_match" or "details.nothing"
+		local key = query ~= "" and "details.no_match" or (view.incomplete(result) and "details.incomplete" or "details.nothing")
 		table.insert(body, ui.label({ text = noctalia.tr(key), fontSize = 13, color = "on_surface_variant" }))
 	end
 

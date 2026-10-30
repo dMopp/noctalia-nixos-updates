@@ -24,6 +24,12 @@ function M.safeUrl(url)
 	return url
 end
 
+-- A URL can carry credentials (https://token@host/..., ?token=...); they stay
+-- out of the panel and result.json.
+local function withoutCredentials(url)
+	return (tostring(url):gsub("//[^/@]*@", "//"):gsub("[%?#].*$", ""))
+end
+
 local function shortRev(locked)
 	if type(locked) ~= "table" then
 		return ""
@@ -33,7 +39,7 @@ local function shortRev(locked)
 	end
 	-- Tarball inputs (channels) have no rev; their URL names the release.
 	if type(locked.url) == "string" then
-		return locked.url:match("([^/]+)/[^/]*$") or ""
+		return withoutCredentials(locked.url):match("([^/]+)/[^/]*$") or ""
 	end
 	return ""
 end
@@ -46,9 +52,7 @@ local function source(original)
 		local ref = original.ref ~= nil and ("/" .. original.ref) or ""
 		return tostring(original.type) .. ":" .. original.owner .. "/" .. original.repo .. ref
 	end
-	-- A URL can carry credentials (https://token@host/...); they stay out of
-	-- the panel and result.json.
-	return (tostring(original.url or original.path or original.type or ""):gsub("//[^/@]*@", "//"))
+	return withoutCredentials(original.url or original.path or original.type or "")
 end
 
 -- Web page with the commits between two revisions, where the host has one.
