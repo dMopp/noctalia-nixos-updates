@@ -21,6 +21,8 @@
     "search": "Search by name or version"
   },
   "errors": {
+    "bad_flake_dir": "The flake directory must be an absolute path without ? or #: {dir}",
+    "bad_result": "The check finished, but its results could not be read",
     "no_flake": "No flake.nix in {dir}",
     "no_lock": "No flake.lock in {dir}",
     "no_nix": "nix is not on PATH",
@@ -69,11 +71,11 @@
       "label": "Check interval (hours)"
     },
     "check_packages": {
-      "description": "Evaluate the NixOS configuration with the current and the updated lock and list the package versions that change. Takes a few seconds of CPU per check, longer when a new nixpkgs has to be downloaded.",
+      "description": "Evaluate the NixOS configuration with the current and the updated lock and list the package versions that change. This evaluates the code of input revisions you have not accepted yet; nothing is built. Takes a few seconds of CPU per check, longer when a new nixpkgs has to be downloaded.",
       "label": "Compare package versions"
     },
     "flake_dir": {
-      "description": "Directory with flake.nix and flake.lock. It is only read; the updated lock goes to the plugin's data directory. Empty: only Flatpaks.",
+      "description": "Directory with flake.nix and flake.lock, as an absolute path. Not written to; the updated lock goes to the plugin's data directory. Empty: only Flatpaks.",
       "label": "Flake directory"
     },
     "glyph": {

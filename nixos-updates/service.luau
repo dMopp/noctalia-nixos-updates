@@ -20,6 +20,9 @@ local STALE_RUN_S = 60 * 60
 -- Wait this long after flake.lock or a Flatpak installation changed before
 -- checking again, so an update in progress can finish.
 local SETTLE_S = 20
+-- After a failed check (no network yet, for instance) try again this soon
+-- instead of showing the error until the next regular check.
+local RETRY_S = 15 * 60
 
 local result = {}
 local running = false
@@ -56,6 +59,12 @@ local function flakeDir()
 	return (noctalia.expandPath(dir):gsub("/+$", ""))
 end
 
+-- Nix reads the directory as a flake reference: anything but an absolute path
+-- without ? and # would mean another flake (a registry name, a URL parameter).
+local function validFlakeDir(dir)
+	return dir:sub(1, 1) == "/" and dir:find("[%?#%c]") == nil
+end
+
 local function readJson(path)
 	if not noctalia.fileExists(path) then
 		return nil
@@ -64,8 +73,10 @@ local function readJson(path)
 end
 
 local function mtime(path)
+	-- Whole seconds: the fraction does not survive the way through result.json,
+	-- and every restart would look like a change.
 	local info = noctalia.fileInfo(path)
-	return info ~= nil and info.mtime or 0
+	return info ~= nil and math.floor(info.mtime) or 0
 end
 
 -- Files that change when the user updates: the flake's lock and Flatpak's
@@ -143,9 +154,14 @@ local function stepError(name, message)
 	return noctalia.tr("errors.step_failed", { step = noctalia.tr("steps." .. name), message = message })
 end
 
-local function finish()
+-- Replaces the result with what this run found. What a failed step could not
+-- find keeps its last known list: a network hiccup must not empty the panel or
+-- announce the same updates again afterwards.
+local function collect()
 	local dir = dataDir()
+	local previous = result
 	local previousKeys = result.keys
+	local sameFlake = previous.flakeDir == flakeDir()
 	local fresh = {
 		checkedAt = os.time(),
 		flakeDir = flakeDir(),
@@ -161,10 +177,9 @@ local function finish()
 	if flakeDir() ~= "" and not failed.lock then
 		local oldLock = readJson(flakeDir() .. "/flake.lock")
 		local newLock = readJson(dir .. "/new.lock")
-		local rows, total = diff.inputs(oldLock, newLock, config("ignored_inputs", {}))
+		local rows = diff.inputs(oldLock, newLock, config("ignored_inputs", {}))
 		if rows ~= nil then
 			fresh.inputs = rows
-			fresh.inputsTotal = total
 		end
 		if config("check_packages", true) == true and not failed["eval-old"] and not failed["eval-new"] then
 			local oldPkgs = readJson(dir .. "/packages-old.json")
@@ -174,21 +189,42 @@ local function finish()
 			end
 		end
 	end
+	if sameFlake and failed.lock then
+		fresh.inputs = previous.inputs
+	end
+	if sameFlake and (failed.lock or failed["eval-old"] or failed["eval-new"]) then
+		fresh.packages = previous.packages
+	end
 
 	if config("check_flatpak", true) == true and noctalia.commandExists("flatpak") and not failed.flatpak then
 		fresh.flatpak = diff.flatpak(
 			noctalia.readFile(dir .. "/flatpak-installed.tsv") or "",
 			noctalia.readFile(dir .. "/flatpak-updates.tsv") or ""
 		)
+	elseif failed.flatpak then
+		fresh.flatpak = previous.flatpak
 	end
 
 	result = fresh
 	result.count = count(result)
 	result.keys = updateKeys(result)
-	running = false
-	step = ""
 	notifyNew(previousKeys)
 	save()
+end
+
+-- Whatever goes wrong while reading the results must not leave the service
+-- "running" for an hour.
+local function finish()
+	local ok, err = pcall(collect)
+	if not ok then
+		noctalia.log("collecting the results failed: " .. tostring(err))
+		table.insert(errors, { step = "", message = noctalia.tr("errors.bad_result") })
+		result.errors = errors
+		result.checkedAt = os.time()
+		result.stamps = stamps()
+	end
+	running = false
+	step = ""
 	publish()
 end
 
@@ -207,7 +243,10 @@ local function check()
 	end
 	errors = {}
 	local flake = flakeDir()
-	if flake ~= "" and not noctalia.fileExists(flake .. "/flake.nix") then
+	if flake ~= "" and not validFlakeDir(flake) then
+		table.insert(errors, { step = "lock", message = noctalia.tr("errors.bad_flake_dir", { dir = flake }) })
+		flake = ""
+	elseif flake ~= "" and not noctalia.fileExists(flake .. "/flake.nix") then
 		table.insert(errors, { step = "lock", message = noctalia.tr("errors.no_flake", { dir = flake }) })
 		flake = ""
 	elseif flake ~= "" and not noctalia.commandExists("nix") then
@@ -304,6 +343,9 @@ function update()
 	end
 	local last = tonumber(result.checkedAt) or 0
 	local interval = math.max(tonumber(config("check_interval_hours", 6)) or 6, 1) * 3600
+	if type(result.errors) == "table" and #result.errors > 0 then
+		interval = math.min(interval, RETRY_S)
+	end
 	local old = result.stamps or {}
 	local current = stamps()
 	local touched = old.lock ~= current.lock or old.flatpakSystem ~= current.flatpakSystem or old.flatpakUser ~= current.flatpakUser

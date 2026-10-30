@@ -13,32 +13,61 @@
 # Result files: new.lock (the lock `nix flake update` would write),
 # packages-old.json / packages-new.json (name and version of every
 # environment.systemPackages entry plus the kernel, with changelog and
-# homepage), flatpak-installed.tsv,
-# flatpak-updates.tsv (installation, application, branch, new version).
+# homepage), flatpak-installed.tsv, flatpak-updates.tsv (installation,
+# application, branch, new version).
 
 set -u
+umask 077
 out=$1
 dir=$2
 cfg=$3
 packages=$4
 flatpak=$5
 
-nixflags="--extra-experimental-features nix-command --extra-experimental-features flakes"
+err="$out/stderr"
+rc=0
 
 # Every external call has a time limit, so the script always ends on its own:
 # the service cannot stop a stream it started. Worst case 10 + 2 * 15 + 3 * 3
 # = 49 minutes; the service waits longer than that before it gives a run up.
-# timeout -k kills what ignores the TERM after 30 seconds.
+# timeout -k kills what ignores the TERM after 30 seconds. No stdin, so nothing
+# can wait for an answer.
 limit() {
 	minutes=$1
 	shift
-	timeout -k 30 "${minutes}m" "$@"
+	timeout -k 30 "${minutes}m" "$@" </dev/null
+	rc=$?
+	return "$rc"
 }
-err="$out/stderr"
 
-# Last stderr lines of the failed command on one line.
+# The updated lock points at code the user has not accepted yet, and it is
+# evaluated in the background. So settings that would widen what that code can
+# do are off here, whatever nix.conf says: no nixConfig from the flake, no
+# builtins.exec. max-jobs 0 without builders: nothing is built; a build the
+# evaluation asks for (import from derivation) only comes from a binary cache,
+# else the evaluation fails with an error.
+run_nix() {
+	minutes=$1
+	shift
+	limit "$minutes" nix \
+		--extra-experimental-features nix-command \
+		--extra-experimental-features flakes \
+		--option accept-flake-config false \
+		--option allow-unsafe-native-code-during-evaluation false \
+		--option max-jobs 0 \
+		--option builders "" \
+		"$@"
+}
+
+# One line for the service: the last stderr lines without control characters,
+# cut to a length the stream takes. Output of a failed command stays in $err,
+# only this line reaches the protocol.
 fail() {
-	printf 'fail %s %s\n' "$1" "$(grep -v '^warning:' "$err" | tail -n 3 | tr '\n\t' '  ')"
+	if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
+		printf 'fail %s timed out\n' "$1"
+		return
+	fi
+	printf 'fail %s %s\n' "$1" "$(grep -v '^warning:' "$err" | tail -n 3 | tr '\n\t' '  ' | tr -d '\000-\037\177' | cut -c1-500)"
 }
 
 # Name, version, changelog and homepage of each package; entries that fail to
@@ -61,8 +90,7 @@ in builtins.concatMap pkg (c.environment.systemPackages ++ (if kernel.success th
 evaluate() {
 	lock=$1
 	result=$2
-	# shellcheck disable=SC2086
-	if limit 15 nix $nixflags eval --json --no-write-lock-file --reference-lock-file "$lock" \
+	if run_nix 15 eval --json --no-write-lock-file --reference-lock-file "$lock" \
 		"$dir#nixosConfigurations.\"$cfg\".config" --apply "$apply" >"$result.tmp" 2>"$err"; then
 		mv "$result.tmp" "$result"
 		return 0
@@ -73,11 +101,10 @@ evaluate() {
 
 if [ -n "$dir" ]; then
 	echo "step lock"
-	rm -f "$out/new.lock"
-	# shellcheck disable=SC2086
+	rm -f "$out/new.lock" "$out/packages-old.json" "$out/packages-new.json"
 	if [ ! -f "$dir/flake.lock" ]; then
 		echo "fail lock no-lock"
-	elif ! limit 10 nix $nixflags flake update --flake "$dir" --output-lock-file "$out/new.lock" 2>"$err"; then
+	elif ! run_nix 10 flake update --flake "$dir" --output-lock-file "$out/new.lock" >/dev/null 2>"$err"; then
 		fail lock
 	elif [ "$packages" = 1 ]; then
 		[ -n "$cfg" ] || cfg=$(cat /proc/sys/kernel/hostname)

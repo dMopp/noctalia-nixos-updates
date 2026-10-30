@@ -6,13 +6,19 @@
 local M = {}
 
 -- Links come from flake.lock and package metadata, i.e. from whoever controls
--- an input. Only plain http(s) URLs pass: no file://, no local paths, no
--- leading dash that xdg-open could take for an option, no whitespace.
+-- an input. Only plain http(s) URLs pass: a host, then a port, path, query or
+-- fragment. That rules out file://, local paths, a leading dash xdg-open could
+-- take for an option, a user part that disguises the host (https://a.org@b.org),
+-- and whitespace and shell metacharacters, should a browser wrapper be careless.
 function M.safeUrl(url)
 	if type(url) ~= "string" or #url > 2048 then
 		return nil
 	end
-	if url:match("^https?://[%w%-%.]+[:/]?[^%s]*$") == nil then
+	local rest = url:match("^https?://%w[%w%-%.]*(.*)$")
+	if rest == nil or rest:find("[^%w%-%._~:/%?#%[%]@%+,=%%&]") ~= nil then
+		return nil
+	end
+	if rest ~= "" and rest:match("^:%d+$") == nil and rest:match("^:%d+[/%?#]") == nil and rest:match("^[/%?#]") == nil then
 		return nil
 	end
 	return url
@@ -40,7 +46,9 @@ local function source(original)
 		local ref = original.ref ~= nil and ("/" .. original.ref) or ""
 		return tostring(original.type) .. ":" .. original.owner .. "/" .. original.repo .. ref
 	end
-	return tostring(original.url or original.path or original.type or "")
+	-- A URL can carry credentials (https://token@host/...); they stay out of
+	-- the panel and result.json.
+	return (tostring(original.url or original.path or original.type or ""):gsub("//[^/@]*@", "//"))
 end
 
 -- Web page with the commits between two revisions, where the host has one.
@@ -55,6 +63,10 @@ local function compareUrl(original, oldLocked, newLocked)
 	local base = hosts[original.type]
 	if base == nil then
 		return nil
+	end
+	-- Self-hosted instance: github:owner/repo?host=git.example.org
+	if original.host ~= nil then
+		base = "https://" .. tostring(original.host)
 	end
 	local sep = original.type == "gitlab" and "/-/compare/" or "/compare/"
 	return M.safeUrl(base .. "/" .. original.owner .. "/" .. original.repo .. sep .. oldLocked.rev .. "..." .. newLocked.rev)
@@ -81,14 +93,12 @@ function M.inputs(oldLock, newLock, ignored)
 	end
 	local skip = {}
 	for _, name in ipairs(ignored or {}) do
-		skip[noctalia.string.trim(tostring(name))] = true
+		skip[tostring(name):match("^%s*(.-)%s*$")] = true
 	end
 	local rows = {}
-	local total = 0
 	for name, oldKey in pairs(oldInputs) do
 		local newKey = newInputs[name]
 		if type(oldKey) == "string" and type(newKey) == "string" then
-			total += 1
 			local old = oldLock.nodes[oldKey] or {}
 			local new = newLock.nodes[newKey] or {}
 			local oldHash = old.locked and old.locked.narHash
@@ -109,7 +119,7 @@ function M.inputs(oldLock, newLock, ignored)
 	table.sort(rows, function(a, b)
 		return a.name:lower() < b.name:lower()
 	end)
-	return rows, total
+	return rows
 end
 
 -- name -> versions joined with ", ", and name -> { c, h } (changelog and

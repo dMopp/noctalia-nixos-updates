@@ -21,6 +21,8 @@
     "search": "Nach Name oder Version suchen"
   },
   "errors": {
+    "bad_flake_dir": "Das Flake-Verzeichnis muss ein absoluter Pfad ohne ? und # sein: {dir}",
+    "bad_result": "Die Prüfung ist fertig, ihre Ergebnisse konnten aber nicht gelesen werden",
     "no_flake": "Keine flake.nix in {dir}",
     "no_lock": "Keine flake.lock in {dir}",
     "no_nix": "nix ist nicht im PATH",
@@ -69,11 +71,11 @@
       "label": "Prüfintervall (Stunden)"
     },
     "check_packages": {
-      "description": "Die NixOS-Konfiguration mit der aktuellen und der aktualisierten Lock-Datei auswerten und die Paketversionen auflisten, die sich ändern. Kostet pro Prüfung ein paar Sekunden CPU, länger wenn ein neues nixpkgs geladen werden muss.",
+      "description": "Die NixOS-Konfiguration mit der aktuellen und der aktualisierten Lock-Datei auswerten und die Paketversionen auflisten, die sich ändern. Dabei wird Code von Input-Ständen ausgewertet, die du noch nicht übernommen hast; gebaut wird nichts. Kostet pro Prüfung ein paar Sekunden CPU, länger wenn ein neues nixpkgs geladen werden muss.",
       "label": "Paketversionen vergleichen"
     },
     "flake_dir": {
-      "description": "Verzeichnis mit flake.nix und flake.lock. Wird nur gelesen; die aktualisierte Lock-Datei landet im Datenverzeichnis des Plugins. Leer: nur Flatpaks.",
+      "description": "Verzeichnis mit flake.nix und flake.lock, als absoluter Pfad. Wird nicht beschrieben; die aktualisierte Lock-Datei landet im Datenverzeichnis des Plugins. Leer: nur Flatpaks.",
       "label": "Flake-Verzeichnis"
     },
     "glyph": {

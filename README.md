@@ -17,8 +17,10 @@ noctalia msg plugins source add nixos-updates-local path ~/coding-projects/nocta
 noctalia msg plugins enable dmopp/nixos-updates
 ```
 
-Still missing for a community-plugins PR: `thumbnail.webp` (made with the
-[thumbnail generator](https://assets.noctalia.dev/plugins/thumbnail-generator.html))
-and a panel screenshot.
+Tests of the comparisons (not part of the plugin directory):
+
+```sh
+nix shell nixpkgs#luau -c luau tests/diff.luau
+```
 
 Written with help from Claude Code.

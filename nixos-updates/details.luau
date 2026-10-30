@@ -1,6 +1,6 @@
 --!nonstrict
 -- Details window: every pending update in one table (name, installed, new,
--- details), with a search field and a filter by kind. Opened from the compact
+-- where to read the changes), with a search field and a filter by kind. Opened from the compact
 -- panel when the list gets long.
 
 local view = require("./lib/view.luau")
@@ -27,10 +27,11 @@ local function matches(...)
 end
 
 -- Labels size to their text; the fixed-width row around them keeps the
--- columns aligned.
--- Labels size to their text; the fixed-width row around them keeps the
 -- columns aligned. Without a width the cell takes the remaining space.
 local function cell(text, width, color, weight, size)
+	if text == "" then
+		text = "–"
+	end
 	return ui.row({ width = width, minWidth = width, flexGrow = width == nil and 1 or nil, align = "center" }, {
 		ui.label({
 			text = text,
