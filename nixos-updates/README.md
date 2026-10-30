@@ -3,7 +3,8 @@
 Shows what an update would bring, like `apt list --upgradable` on Debian:
 the flake inputs that have new commits, the package versions of your NixOS
 configuration that change with them (`brave 1.97.59 → 1.98.60`), and pending
-Flatpak updates. The bar widget shows the count, the panel the details.
+Flatpak updates. The bar widget shows the count as a filled badge, the panel
+the details.
 
 Checking changes nothing: `flake.lock` stays as it is, nothing is built or
 installed. Updating is up to you, through the command you set for the panel's
@@ -38,7 +39,8 @@ installed. Updating is up to you, through the command you set for the panel's
 The first check runs a minute after the plugin starts when the last one is
 older than the check interval; the result of the last check is kept across
 restarts. A change of `flake.lock` or of a Flatpak installation (after you
-updated) triggers a new check about 20 seconds later.
+updated) triggers a new check within about two minutes. A change of the
+configuration alone does not; it shows with the next check or **Check now**.
 
 Left-click the widget for the panel:
 
@@ -66,7 +68,11 @@ Changes column (a click on the row opens it; in the compact panel too):
   GitHub repository; else "No changelog".
 - Flatpaks from Flathub: the app page, which lists the release notes.
   Runtimes have none.
-- Inputs on GitHub, GitLab or Codeberg: the comparison of both revisions.
+- Inputs on GitHub, GitLab or Codeberg: the comparison of both revisions; else
+  "No comparison available".
+
+Plugins get no activation token, so whether the browser window comes to the
+front is up to the compositor; it may open on another workspace.
 
 ```sh
 noctalia msg panel-toggle dmopp/nixos-updates:panel
@@ -77,8 +83,9 @@ The count is the number of listed rows: package changes, Flatpak updates and
 inputs with new commits. An input counts on its own because a package built
 from it can get new commits without a new version number, so it would not show
 up as a package change. A nixpkgs bump therefore counts as one more on top of
-the packages it changes. Errors turn the glyph red and show
-up in the tooltip and the panel.
+the packages it changes. While updates are pending the widget is a filled
+badge. Errors turn the badge to the error color and show up in the tooltip and
+the panel.
 
 ## Settings
 
@@ -140,7 +147,8 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
 - **Network:** `nix` fetches the inputs' latest revisions (and, on the first
   evaluation of a new nixpkgs, its source) like `nix flake update` does;
   `flatpak remote-ls` fetches the remotes' metadata. The plugin itself makes no
-  HTTP requests. Nothing runs while `shell.offline_mode` is on.
+  HTTP requests. Automatic checks pause while `shell.offline_mode` is on; **Check
+  now** and the IPC command still run.
 - **CPU:** an evaluation of the NixOS configuration takes a few seconds to a
   minute, depending on the configuration; Nix's own caches make it much
   cheaper when neither the lock nor the configuration changed.
