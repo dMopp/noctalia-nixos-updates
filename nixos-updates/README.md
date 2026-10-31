@@ -251,10 +251,8 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
   stores fetched input sources there until the next garbage collection, and uses
   `~/.cache/nix`.
 - **Processes:** `sh scripts/check.sh` (with the `nix` and `flatpak` calls
-  above), `xdg-open <url>` on a click on a row with a changes link, the
-  configured update command in a terminal on **Update**, and (when `terminal` is
-  set) `systemd-run --user --scope --collect --quiet` to launch it in a
-  transient scope unit that cleans up after itself.
+  above), `xdg-open <url>` on a click on a row with a changes link, and the
+  configured update command in a terminal on **Update**.
 - Only packages listed in `environment.systemPackages` (and the kernel) are
   compared, not their dependencies or services. Home Manager packages are not
   included. A package built from an input can get new commits without a new
