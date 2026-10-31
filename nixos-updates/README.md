@@ -19,8 +19,8 @@ the panel's **Update** button.
 
 ## Requirements
 
-- `nix` with flakes (the plugin passes `--extra-experimental-features "nix-command flakes"`
-  itself) and support for `nix flake update --output-lock-file` and
+- `nix` with flakes (the plugin passes `--extra-experimental-features` for
+  `nix-command` and `flakes` itself) and support for `nix flake update --output-lock-file` and
   `nix eval --reference-lock-file`. Tested with Nix 2.34.
 - `sh`, `timeout`, `cat`, `cmp`, `cp`, `cut`, `grep`, `head`, `id`, `mv`,
   `readlink`, `rm`, `sed`, `stat`, `tail`, `tr` (a shell, coreutils, diffutils,
@@ -101,6 +101,7 @@ Plugin settings:
 | `check_packages` | `bool` | `true` | Evaluate the configuration with the current and the updated lock and compare package versions. |
 | `check_flatpak` | `bool` | `true` | List pending Flatpak updates of the system and user installations. |
 | `check_interval_hours` | `int` | `6` | Hours between two checks (1-168). After a failed check at most 15 minutes. |
+| `terminal` | `string` | `""` | Terminal command prefix for the **Update** button, e.g. `kitty --class nixos-updates -e`. Gives the terminal its own window class so a compositor window rule can float it without affecting other terminals. Empty: Noctalia's default terminal. |
 | `update_command` | `string` | `""` | Shell command for the **Update** button, run in a terminal when you press it, never on its own. Empty: the button opens the settings instead. |
 | `github_token_file` | `file` | `""` | Optional. Path to a file with a GitHub token, see [GitHub rate limit](#github-rate-limit). The token itself never goes into the settings. |
 | `notify` | `bool` | `true` | Notify when a check finds updates that were not pending before. |
@@ -126,7 +127,7 @@ many checks in a row or other Nix use on the same address.
 
 Nix does not fail then: it warns and reuses what it knew. The plugin treats this
 as a failed check, shows the reason, keeps the last known lists and tries again
-every 15 minutes. It does not claim "up to date" from old data. Note that a
+every 15 minutes. It does not claim "up to date" after a failed check. Note that a
 plain `nix flake update` or your update command is affected the same way while
 the limit is reached: it can finish without updating anything.
 
@@ -227,7 +228,8 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
   from `flake.lock` and package metadata. Only plain `http://` / `https://` URLs
   are shown and opened, with a host that cannot be disguised and without
   whitespace or shell metacharacters; anything else (`file://`, paths, values
-  starting with `-`) gets no link. Credentials in an input URL are not shown.
+  starting with `-`) gets no link. Credentials and query strings of an input
+  URL are not shown.
 - **Network:** `nix` fetches the inputs' latest revisions (and, on the first
   evaluation of a new revision, its source) like `nix flake update` does, using
   your flake registry and binary caches; `flatpak remote-ls` fetches the remotes'

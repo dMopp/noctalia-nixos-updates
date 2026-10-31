@@ -29,11 +29,11 @@ token=""
 err="$out/stderr"
 rc=0
 
-# Every external call has a time limit, so the script always ends on its own:
+# Every nix and flatpak call has a time limit, so the script ends on its own:
 # the service cannot stop a stream it started. Worst case 10 + 2 * 15 + 3 * 3
-# = 49 minutes; the service waits longer than that before it gives a run up.
-# timeout -k kills what ignores the TERM after 30 seconds. No stdin, so nothing
-# can wait for an answer.
+# = 49 minutes, plus 30 seconds per call for timeout -k to kill what ignores the
+# TERM: 52 minutes; the service waits longer than that before it gives a run up.
+# No stdin, so nothing can wait for an answer.
 limit() {
 	minutes=$1
 	shift
@@ -61,15 +61,18 @@ run_nix() {
 		"$@"
 }
 
-# One line for the service: the last stderr lines without control characters,
-# cut to a length the stream takes. Output of a failed command stays in $err,
-# only this line reaches the protocol.
+# One line for the service, without control characters and cut to a length the
+# stream takes: Nix's last error line, as Nix ends an error with a code frame
+# that says little alone, else the last stderr lines. Output of a failed command
+# stays in $err, only this line reaches the protocol.
 fail() {
 	if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
 		printf 'fail %s timed out\n' "$1"
 		return
 	fi
-	printf 'fail %s %s\n' "$1" "$(grep -v '^warning:' "$err" | tail -n 3 | tr '\n\t' '  ' | tr -d '\000-\037\177' | cut -c1-500)"
+	message=$(grep 'error: *[^ ]' "$err" | tail -n 1)
+	[ -n "$message" ] || message=$(grep -v '^warning:' "$err" | tail -n 3)
+	printf 'fail %s %s\n' "$1" "$(printf '%s\n' "$message" | tr '\n\t' '  ' | tr -d '\000-\037\177' | cut -c1-500)"
 }
 
 # Reads the optional GitHub token, refusing anything that could leak it or
@@ -217,4 +220,4 @@ if [ "$flatpak" = 1 ] && command -v flatpak >/dev/null 2>&1; then
 fi
 
 rm -f "$err"
-echo done
+echo "done"
