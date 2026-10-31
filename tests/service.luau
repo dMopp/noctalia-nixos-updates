@@ -1,51 +1,33 @@
 --!nonstrict
--- Tests for the runUpdate command construction, run from the repo root:
+-- Tests for the command the Update button starts with `terminal` set, run from
+-- the repo root:
 --   nix shell nixpkgs#luau -c luau tests/service.luau
+
+local diff = require("../nixos-updates/lib/diff")
 
 local failed = 0
 local function check(name, got, want)
 	if got ~= want then
-		failed = failed + 1
+		failed += 1
 		print("FAIL " .. name .. ": got " .. tostring(got) .. ", want " .. tostring(want))
 	end
 end
 
--- Inline buildRunCommand — mirrors the new runUpdate logic
-local function buildRunCommand(updateCmd, terminal)
-	if terminal == "" then
-		return "runInTerminal:" .. updateCmd
-	end
-	return "runInTerminal:" .. terminal .. " " .. updateCmd
-end
-
--- === Empty terminal → fallback ===
-check("empty terminal → runInTerminal",
-	buildRunCommand("nix flake update", ""),
-	"runInTerminal:nix flake update")
-
--- === Simple case: kitty ===
 check("kitty class",
-	buildRunCommand("nix flake update --flake /etc/nixos", "kitty --class nixos-updates -e"),
-	"runInTerminal:kitty --class nixos-updates -e nix flake update --flake /etc/nixos")
+	diff.terminalCommand("kitty --class nixos-updates -e", "nrs --update"),
+	"kitty --class nixos-updates -e sh -lc 'nrs --update'")
 
--- === Terminal with spaces ===
-check("terminal with spaces",
-	buildRunCommand("nix flake update", "'/path/to/my terminal' --class test"),
-	"runInTerminal:'/path/to/my terminal' --class test nix flake update")
+-- All of it in the terminal, not `a` in it and `b` in the shell around it
+check("&& stays inside the argument",
+	diff.terminalCommand("alacritty -e", "nix flake update && sudo nixos-rebuild switch"),
+	"alacritty -e sh -lc 'nix flake update && sudo nixos-rebuild switch'")
 
--- === Update command with single quotes ===
-check("cmd with single quotes",
-	buildRunCommand("sudo nixos-rebuild switch --flake '/etc/nixos#myconfig'", "kitty -e"),
-	"runInTerminal:kitty -e sudo nixos-rebuild switch --flake '/etc/nixos#myconfig'")
+check("single quotes in the update command",
+	diff.terminalCommand("kitty -e", "sudo nixos-rebuild switch --flake '/etc/nixos#myconfig'"),
+	"kitty -e sh -lc 'sudo nixos-rebuild switch --flake '\\''/etc/nixos#myconfig'\\'''")
 
--- === Command with && ===
-check("cmd with &&",
-	buildRunCommand("nix flake update && sudo nixos-rebuild switch", "alacritty -e"),
-	"runInTerminal:alacritty -e nix flake update && sudo nixos-rebuild switch")
-
--- === Verify runInTerminal is always used ===
-local result = buildRunCommand("nix flake update", "kitty --class nixos-updates -e")
-assert(result:find("runInTerminal:") ~= nil, "must use runInTerminal")
-assert(not result:find("systemd"), "must NOT use systemd-run")
+check("prefix keeps its own quoting",
+	diff.terminalCommand("'/path/to/my terminal' --class test", "true"),
+	"'/path/to/my terminal' --class test sh -lc 'true'")
 
 print(failed == 0 and "all tests passed" or (tostring(failed) .. " failed"))

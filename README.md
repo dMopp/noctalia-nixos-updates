@@ -21,6 +21,7 @@ Tests of the comparisons (not part of the plugin directory):
 
 ```sh
 nix shell nixpkgs#luau -c luau tests/diff.luau
+nix shell nixpkgs#luau -c luau tests/service.luau
 ```
 
 Written with help from Claude Code.

@@ -121,7 +121,7 @@
       "label": "0 anzeigen wenn aktuell"
     },
     "terminal": {
-      "description": "Terminal-Befehlspräfix für den Aktualisieren-Knopf, z. B.: kitty --class nixos-updates -e. Gibt dem Terminal eine eigene Window-Class, damit eine Compositor-Window-Rule es floaten kann, ohne andere Terminals zu beeinflussen. Leer: Noctalias Standardterminal.",
+      "description": "Terminal-Befehl, mit dem der Aktualisieren-Knopf den Update-Befehl startet, z. B.: kitty --class nixos-updates -e. Die Option, mit der dein Terminal einen Befehl ausführt, gehört dazu. Gib ihm eine eigene Window-Class oder App-ID und nutze sie in einer Window-Rule des Compositors, um es floaten zu lassen, ohne andere Terminals zu beeinflussen. Leer: Noctalias Standardterminal.",
       "label": "Terminal-Befehl"
     },
     "update_command": {

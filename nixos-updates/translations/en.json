@@ -121,7 +121,7 @@
       "label": "Show 0 when up to date"
     },
     "terminal": {
-      "description": "Terminal command prefix for the Update button, for example: kitty --class nixos-updates -e. Gives the terminal its own window class so a compositor window rule can float it without affecting other terminals. Empty: Noctalia's default terminal.",
+      "description": "Terminal command the Update button starts the update command with, for example: kitty --class nixos-updates -e. Include the option your terminal needs to run a command. Give it its own window class or app id, then match that in a compositor window rule to float it without affecting other terminals. Empty: Noctalia's default terminal.",
       "label": "Terminal command"
     },
     "update_command": {
