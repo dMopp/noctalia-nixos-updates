@@ -59,6 +59,13 @@ description_key = "settings.update_command.description"
 default = ""
 
 [[setting]]
+key = "terminal"
+type = "string"
+label_key = "settings.terminal.label"
+description_key = "settings.terminal.description"
+default = ""
+
+[[setting]]
 key = "github_token_file"
 type = "file"
 label_key = "settings.github_token_file.label"

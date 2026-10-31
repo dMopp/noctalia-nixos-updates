@@ -298,7 +298,18 @@ local function runUpdate()
 		noctalia.openSettings()
 		return
 	end
-	noctalia.runInTerminal(cmd)
+	local terminal = noctalia.string.trim(tostring(config("terminal", "")))
+	if terminal == "" then
+		noctalia.runInTerminal(cmd)
+		return
+	end
+	-- Use environment variables to avoid shell-escaping issues with
+	-- both the terminal prefix and the update command.
+	local full = "UPDATE_CMD=" .. quote(cmd)
+		.. " UPDATE_PREFIX=" .. quote(terminal)
+		.. " systemd-run --user --scope --collect --quiet sh -c "
+		.. quote("exec \"$UPDATE_PREFIX\" \"$UPDATE_CMD\"")
+	noctalia.runAsync(full)
 end
 
 local function offline()

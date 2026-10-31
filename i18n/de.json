@@ -120,6 +120,10 @@
     "show_zero": {
       "label": "0 anzeigen wenn aktuell"
     },
+    "terminal": {
+      "description": "Terminal-Befehlspräfix für den Aktualisieren-Knopf, z. B.: kitty --class nixos-updates -e. Gibt dem Terminal eine eigene Window-Class, damit eine Compositor-Window-Rule es floaten kann, ohne andere Terminals zu beeinflussen. Leer: Noctalias Standardterminal.",
+      "label": "Terminal-Befehl"
+    },
     "update_command": {
       "description": "Läuft über den Aktualisieren-Knopf im Panel in einem Terminal, z. B.: nix flake update --flake /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos && flatpak update -y. Leer: kein Aktualisieren-Knopf.",
       "label": "Update-Befehl"
