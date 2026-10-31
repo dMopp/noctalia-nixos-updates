@@ -299,7 +299,7 @@ local function runUpdate()
 		return
 	end
 	local terminal = noctalia.string.trim(tostring(config("terminal", "")))
-	if terminal == "" or not noctalia.commandExists("systemd-run") then
+	if terminal == "" then
 		noctalia.runInTerminal(cmd)
 		return
 	end
