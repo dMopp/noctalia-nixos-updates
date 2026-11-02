@@ -1,1 +1,4 @@
 *.bak*
+.mcp.json
+CLAUDE.md
+.kilo/*
