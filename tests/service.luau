@@ -15,19 +15,19 @@ end
 
 check("kitty class",
 	diff.terminalCommand("kitty --class nixos-updates -e", "nrs --update"),
-	"kitty --class nixos-updates -e sh -lc 'nrs --update'")
+	"systemd-run --user --scope --collect --quiet kitty --class nixos-updates -e sh -lc 'nrs --update'")
 
 -- All of it in the terminal, not `a` in it and `b` in the shell around it
 check("&& stays inside the argument",
 	diff.terminalCommand("alacritty -e", "nix flake update && sudo nixos-rebuild switch"),
-	"alacritty -e sh -lc 'nix flake update && sudo nixos-rebuild switch'")
+	"systemd-run --user --scope --collect --quiet alacritty -e sh -lc 'nix flake update && sudo nixos-rebuild switch'")
 
 check("single quotes in the update command",
 	diff.terminalCommand("kitty -e", "sudo nixos-rebuild switch --flake '/etc/nixos#myconfig'"),
-	"kitty -e sh -lc 'sudo nixos-rebuild switch --flake '\\''/etc/nixos#myconfig'\\'''")
+	"systemd-run --user --scope --collect --quiet kitty -e sh -lc 'sudo nixos-rebuild switch --flake '\\''/etc/nixos#myconfig'\\'''")
 
 check("prefix keeps its own quoting",
 	diff.terminalCommand("'/path/to/my terminal' --class test", "true"),
-	"'/path/to/my terminal' --class test sh -lc 'true'")
+	"systemd-run --user --scope --collect --quiet '/path/to/my terminal' --class test sh -lc 'true'")
 
 print(failed == 0 and "all tests passed" or (tostring(failed) .. " failed"))
