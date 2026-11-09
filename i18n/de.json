@@ -69,6 +69,7 @@
     "estimate_left": "noch etwa {seconds} s, gemessen an der letzten Schätzung",
     "estimate_left_guess": "noch etwa {seconds} s, grob geschätzt vor der ersten Messung",
     "estimate_longer": "dauert länger als beim letzten Mal",
+    "estimate_no_fetch": "Download: nichts, alles schon im Store",
     "estimate_running": "Ermittle Download-Größe … {seconds} s",
     "flatpak": "Flatpak-Updates: {count}",
     "inputs": "Flake-Inputs mit neuen Commits: {count}",

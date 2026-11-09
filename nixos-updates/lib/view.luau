@@ -124,20 +124,22 @@ function M.notes(result, system)
 		table.insert(notes, { glyph = "cloud-download", text = tostring(result.estimateError), color = "error" })
 	elseif type(estimate) == "table" and (tonumber(result.count) or 0) > 0 then
 		local parts = {}
+		-- Always a line once there is an estimate, also when everything is in the
+		-- store already, so the result is never just a vanished button.
 		if (tonumber(estimate.fetch) or 0) > 0 then
 			table.insert(parts, noctalia.trp("panel.estimate_fetch", estimate.fetch, { download = estimate.download, unpacked = estimate.unpacked }))
+		else
+			table.insert(parts, noctalia.tr("panel.estimate_no_fetch"))
 		end
 		if (tonumber(estimate.build) or 0) > 0 then
 			table.insert(parts, noctalia.trp("panel.estimate_build", estimate.build))
 		end
-		if #parts > 0 then
-			table.insert(notes, {
-				glyph = "cloud-download",
-				text = table.concat(parts, " · "),
-				color = "on_surface_variant",
-				tooltip = noctalia.tr("panel.estimate_hint"),
-			})
-		end
+		table.insert(notes, {
+			glyph = "cloud-download",
+			text = table.concat(parts, " · "),
+			color = "on_surface_variant",
+			tooltip = noctalia.tr("panel.estimate_hint"),
+		})
 	end
 	return notes
 end

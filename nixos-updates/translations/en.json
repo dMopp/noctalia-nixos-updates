@@ -69,6 +69,7 @@
     "estimate_left": "about {seconds} s left, judging by the last estimate",
     "estimate_left_guess": "about {seconds} s left, a rough guess before the first estimate",
     "estimate_longer": "taking longer than last time",
+    "estimate_no_fetch": "Download: nothing, everything is in the store already",
     "estimate_running": "Estimating download size… {seconds} s",
     "flatpak": "Flatpak updates: {count}",
     "inputs": "Flake inputs with new commits: {count}",
