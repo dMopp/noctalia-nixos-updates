@@ -66,9 +66,13 @@ Above the lists, when they apply:
   restart. Read from `/run/booted-system` and `/run/current-system` once a
   minute; the widget turns into a badge with a restart glyph when nothing else
   is pending.
-- **Download estimate**: what the updated system needs that is not in the Nix
-  store yet, from `nix build --dry-run`: store paths to download with download
-  and unpacked size, and derivations to build. It counts every store path,
+- **Download estimate**, on request only: **Estimate download size** asks
+  `nix build --dry-run` what the updated system needs that is not in the Nix
+  store yet: store paths to download with download and unpacked size, and
+  derivations to build. While it runs, the button is disabled and shows the
+  seconds and a progress bar against the duration of the last estimate (Nix
+  reports no progress of its own). The result stays until a check finds a
+  different updated lock. It counts every store path,
   libraries and packages rebuilt with an unchanged version included, so it is
   much higher than the list, which shows versions like `apt list --upgradable`.
   The unpacked size is used on top of the current system until old generations
@@ -125,7 +129,7 @@ Plugin settings:
 | --- | --- | --- | --- |
 | `flake_dir` | `folder` | `/etc/nixos` | Directory with `flake.nix` and `flake.lock`, as an absolute path without `?` or `#`. Not written to. Empty: only Flatpaks. |
 | `nixos_configuration` | `string` | `""` | Attribute under `nixosConfigurations` to evaluate. Empty: the hostname. |
-| `check_packages` | `bool` | `true` | Evaluate the configuration with the current and the updated lock and compare package versions; also estimates the download. |
+| `check_packages` | `bool` | `true` | Evaluate the configuration with the current and the updated lock and compare package versions; needed for the download estimate. |
 | `home_configuration` | `string` | `""` | Advanced. Name under `homeConfigurations` of a standalone Home Manager configuration in the same flake, compared too. Not needed for Home Manager as a NixOS module. |
 | `check_flatpak` | `bool` | `true` | List pending Flatpak updates of the system and user installations. |
 | `check_interval_hours` | `int` | `6` | Hours between two checks (1-168). After a failed check at most 15 minutes. |
@@ -244,6 +248,7 @@ press Enter.
 ```sh
 noctalia msg plugin dmopp/nixos-updates:service all check    # check now
 noctalia msg plugin dmopp/nixos-updates:service all update   # run the update command in a terminal
+noctalia msg plugin dmopp/nixos-updates:service all estimate # estimate the download size
 noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup in a terminal
 ```
 
@@ -263,9 +268,10 @@ noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup i
      The NixOS module of Home Manager adds `home.packages` of its users; with
      `home_configuration` the same runs for
      `homeConfigurations."<name>".config.home.packages`.
-  3. Only when the locks differ: `nix build --dry-run --no-link … '<flake_dir>#nixosConfigurations."<name>".config.system.build.toplevel'`
-     with `new.lock`, for the download estimate. Nothing is built; Nix asks the
-     binary caches which store paths they have.
+  3. Only on **Estimate download size** (`scripts/estimate.sh`):
+     `nix build --dry-run --no-link … '<flake_dir>#nixosConfigurations."<name>".config.system.build.toplevel'`
+     with the `new.lock` of the last check. Nothing is built; Nix asks the
+     binary caches which store paths they have. 10 minute limit.
   4. `flatpak list` (with origin, for the Flathub link) and
      `flatpak remote-ls --system|--user --updates`.
 
@@ -290,7 +296,7 @@ noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup i
   URL are not shown.
 - **Network:** `nix` fetches the inputs' latest revisions (and, on the first
   evaluation of a new revision, its source) like `nix flake update` does, using
-  your flake registry and binary caches; the dry run asks the binary caches
+  your flake registry and binary caches; the download estimate, when you ask for it, queries the binary caches
   about the missing store paths (one small request each); `flatpak remote-ls`
   fetches the remotes' metadata. The plugin itself makes no HTTP requests. Automatic checks pause
   while `shell.offline_mode` is on; **Check now** and the IPC command still run.
@@ -303,14 +309,14 @@ noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup i
   time only).
 - **Files written:** by the plugin only in its data directory
   (`noctalia.pluginDataDir()`, owner only): `new.lock`, `packages-old.json`,
-  `packages-new.json`, `home-old.json`, `home-new.json`, `dry-run.txt`, `flatpak-installed.tsv`, `flatpak-updates.tsv`, `stderr`
+  `packages-new.json`, `home-old.json`, `home-new.json`, `dry-run.txt`, `estimate.lock`, `flatpak-installed.tsv`, `flatpak-updates.tsv`, `stderr`
   during a run, and `result.json` with the last result. `nix` also does what
   every flake command does: it copies `<flake_dir>` to the world-readable Nix
   store (for a Git repository only tracked files, otherwise the whole directory),
   stores fetched input sources there until the next garbage collection, and uses
   `~/.cache/nix`.
 - **Processes:** `sh scripts/check.sh` (with the `nix` and `flatpak` calls
-  above), `xdg-open <url>` on a click on a row with a changes link, and the
+  above), `sh scripts/estimate.sh` on **Estimate download size**, `xdg-open <url>` on a click on a row with a changes link, and the
   configured update command on **Update** and `sh scripts/cleanup.sh` on
   **Clean up**, each in a terminal (with `terminal` set,
   `systemd-run --user --scope --collect --quiet <terminal> sh -lc '<command>'`).

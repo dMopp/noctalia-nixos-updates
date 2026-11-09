@@ -215,6 +215,7 @@ function render()
 				ui.label({ text = noctalia.tr("panel.title"), fontSize = 17, fontWeight = "bold", color = "on_surface" }),
 				ui.label({ text = view.status(result), fontSize = 12, color = "on_surface_variant" }),
 				ui.column({ gap = 2 }, view.noteRows(view.notes(result, system))),
+				view.estimateButton(result),
 			}),
 			ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
 		}),
@@ -241,9 +242,32 @@ function render()
 	}))
 end
 
+-- Frame ticks only while the estimate runs: they move its seconds and progress
+-- bar. Frames are coalesced; drawing every 100 ms is smooth enough.
+local ticking = false
+local sinceDraw = 0
+
+local function updateTicks()
+	local want = result.estimating == true
+	if want ~= ticking then
+		ticking = want
+		sinceDraw = 0
+		panel.setNeedsFrameTick(want)
+	end
+end
+
+function onFrameTick(deltaMs)
+	sinceDraw += tonumber(deltaMs) or 0
+	if sinceDraw >= 100 then
+		sinceDraw = 0
+		render()
+	end
+end
+
 noctalia.state.watch(view.RESULT_KEY, function(value)
 	if type(value) == "table" then
 		result = value
+		updateTicks()
 		render()
 	end
 end)
@@ -257,6 +281,8 @@ end)
 
 -- Every opening starts with an empty search and all kinds shown.
 function onOpen(_context)
+	ticking = false
+	updateTicks()
 	query = ""
 	filter = "all"
 	render()

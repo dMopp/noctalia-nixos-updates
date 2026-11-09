@@ -148,6 +148,10 @@ function render()
 	for _, row in ipairs(view.noteRows(view.notes(result, system))) do
 		table.insert(body, row)
 	end
+	local estimateButton = view.estimateButton(result)
+	if estimateButton ~= nil then
+		table.insert(body, estimateButton)
+	end
 
 	if result.checkedAt ~= nil and not empty then
 		local kinds = {
@@ -199,9 +203,32 @@ function render()
 	}))
 end
 
+-- Frame ticks only while the estimate runs: they move its seconds and progress
+-- bar. Frames are coalesced; drawing every 100 ms is smooth enough.
+local ticking = false
+local sinceDraw = 0
+
+local function updateTicks()
+	local want = result.estimating == true
+	if want ~= ticking then
+		ticking = want
+		sinceDraw = 0
+		panel.setNeedsFrameTick(want)
+	end
+end
+
+function onFrameTick(deltaMs)
+	sinceDraw += tonumber(deltaMs) or 0
+	if sinceDraw >= 100 then
+		sinceDraw = 0
+		render()
+	end
+end
+
 noctalia.state.watch(view.RESULT_KEY, function(value)
 	if type(value) == "table" then
 		result = value
+		updateTicks()
 		render()
 	end
 end)
@@ -214,6 +241,8 @@ noctalia.state.watch(view.SYSTEM_KEY, function(value)
 end)
 
 function onOpen(_context)
+	ticking = false
+	updateTicks()
 	render()
 end
 

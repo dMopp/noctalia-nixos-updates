@@ -24,6 +24,7 @@
   "errors": {
     "bad_flake_dir": "The flake directory must be an absolute path without ? or #: {dir}",
     "bad_result": "The check finished, but its results could not be read",
+    "estimate_no_lock": "Check for updates first; the estimate needs the updated lock of a check.",
     "lock_bad_token": "GitHub rejected the token (expired or revoked?). Create a new one or clear the token file setting.",
     "lock_rate_limit": "GitHub's API rate limit is reached, so updates could not be checked. The list shows the last known state. It resets within an hour; a token (see the settings) raises the limit.",
     "lock_stale": "Could not ask every flake input for its latest revision (no network?). The list shows the last known state.",
@@ -58,11 +59,17 @@
       "one": "{count} to build",
       "other": "{count} to build"
     },
+    "estimate_button": "Estimate download size",
+    "estimate_button_hint": "Asks nix build --dry-run what the updated system would download and build. Nothing is built or downloaded; Nix only asks the binary caches. Takes a few seconds to a minute.",
     "estimate_fetch": {
       "one": "Download: {count} store path, {download} ({unpacked} unpacked)",
       "other": "Download: {count} store paths, {download} ({unpacked} unpacked)"
     },
     "estimate_hint": "What the updated system needs that is not in the Nix store yet, from nix build --dry-run. It counts every store path, libraries and packages rebuilt with the same version included, so it is higher than the list. The space is used on top of the current system until the old generations are cleaned up.",
+    "estimate_left": "about {seconds} s left, judging by the last estimate",
+    "estimate_left_guess": "about {seconds} s left, a rough guess before the first estimate",
+    "estimate_longer": "taking longer than last time",
+    "estimate_running": "Estimating download size… {seconds} s",
     "flatpak": "Flatpak updates: {count}",
     "inputs": "Flake inputs with new commits: {count}",
     "more_updates": "{hidden} more · show all {count} updates",

@@ -118,7 +118,11 @@ function M.notes(result, system)
 		table.insert(notes, { glyph = "refresh-alert", text = text, color = "error", tooltip = noctalia.tr("panel.reboot_hint") })
 	end
 	local estimate = result.estimate
-	if type(estimate) == "table" and (tonumber(result.count) or 0) > 0 then
+	if result.estimating then
+		-- Shown by estimateButton, with its progress.
+	elseif result.estimateError ~= nil then
+		table.insert(notes, { glyph = "cloud-download", text = tostring(result.estimateError), color = "error" })
+	elseif type(estimate) == "table" and (tonumber(result.count) or 0) > 0 then
 		local parts = {}
 		if (tonumber(estimate.fetch) or 0) > 0 then
 			table.insert(parts, noctalia.trp("panel.estimate_fetch", estimate.fetch, { download = estimate.download, unpacked = estimate.unpacked }))
@@ -136,6 +140,68 @@ function M.notes(result, system)
 		end
 	end
 	return notes
+end
+
+-- Nix reports no progress for a dry run, so the bar runs against how long the
+-- last estimate took (30 s before the first one) and stops short of the end
+-- when it takes longer.
+local DEFAULT_ESTIMATE_MS = 30 * 1000
+
+local function estimateProgress(result)
+	local elapsed = math.max(noctalia.nowMs() - (tonumber(result.estimateStartedMs) or noctalia.nowMs()), 0)
+	local expected = math.max(tonumber(result.estimateMs) or DEFAULT_ESTIMATE_MS, 1000)
+	local seconds = math.floor(elapsed / 1000)
+	local hint
+	if elapsed < expected then
+		local key = result.estimateMs ~= nil and "panel.estimate_left" or "panel.estimate_left_guess"
+		hint = noctalia.tr(key, { seconds = tostring(math.ceil((expected - elapsed) / 1000)) })
+	else
+		hint = noctalia.tr("panel.estimate_longer")
+	end
+	return ui.column({ key = "estimate-progress", gap = 4 }, {
+		ui.button({
+			key = "estimate",
+			text = noctalia.tr("panel.estimate_running", { seconds = tostring(seconds) }),
+			glyph = "cloud-download",
+			fontSize = 12,
+			glyphSize = 12,
+			variant = "ghost",
+			controlSize = "sm",
+			contentAlign = "start",
+			enabled = false,
+		}),
+		ui.progress({ progress = math.min(elapsed / expected, 0.95), height = 4, radius = 2 }),
+		ui.label({ text = hint, fontSize = 11, color = "on_surface_variant" }),
+	})
+end
+
+-- The button that starts the download estimate: only while updates are pending,
+-- package versions are compared and no estimate is there. While it runs: the
+-- disabled button with elapsed seconds and a progress bar.
+function M.estimateButton(result)
+	if result.estimating then
+		return estimateProgress(result)
+	end
+	if result.running or result.estimate ~= nil or (tonumber(result.count) or 0) == 0 then
+		return nil
+	end
+	if type(result.packages) ~= "table" then
+		return nil
+	end
+	return ui.button({
+		key = "estimate",
+		text = noctalia.tr("panel.estimate_button"),
+		glyph = "cloud-download",
+		fontSize = 12,
+		glyphSize = 12,
+		variant = "ghost",
+		controlSize = "sm",
+		contentAlign = "start",
+		tooltip = noctalia.tr("panel.estimate_button_hint"),
+		onClick = function()
+			M.send("estimate")
+		end,
+	})
 end
 
 function M.noteRows(notes)

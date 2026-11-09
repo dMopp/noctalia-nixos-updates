@@ -24,6 +24,7 @@
   "errors": {
     "bad_flake_dir": "Das Flake-Verzeichnis muss ein absoluter Pfad ohne ? und # sein: {dir}",
     "bad_result": "Die Prüfung ist fertig, ihre Ergebnisse konnten aber nicht gelesen werden",
+    "estimate_no_lock": "Erst nach Updates suchen; die Schätzung braucht die aktualisierte Lock-Datei einer Prüfung.",
     "lock_bad_token": "GitHub hat den Token abgelehnt (abgelaufen oder widerrufen?). Erstelle einen neuen oder leere die Einstellung zur Token-Datei.",
     "lock_rate_limit": "GitHubs API-Limit ist erreicht, Updates konnten nicht geprüft werden. Die Liste zeigt den letzten bekannten Stand. Das Limit wird innerhalb einer Stunde zurückgesetzt; ein Token (siehe Einstellungen) hebt es an.",
     "lock_stale": "Nicht jeder Flake-Input konnte nach seinem neuesten Stand gefragt werden (kein Netz?). Die Liste zeigt den letzten bekannten Stand.",
@@ -58,11 +59,17 @@
       "one": "{count} zu bauen",
       "other": "{count} zu bauen"
     },
+    "estimate_button": "Download-Größe ermitteln",
+    "estimate_button_hint": "Fragt nix build --dry-run, was das aktualisierte System laden und bauen würde. Es wird nichts gebaut oder geladen, Nix fragt nur die Binary-Caches. Dauert ein paar Sekunden bis eine Minute.",
     "estimate_fetch": {
       "one": "Download: {count} Store-Pfad, {download} (entpackt {unpacked})",
       "other": "Download: {count} Store-Pfade, {download} (entpackt {unpacked})"
     },
     "estimate_hint": "Was das aktualisierte System braucht und noch nicht im Nix-Store liegt, laut nix build --dry-run. Gezählt wird jeder Store-Pfad, auch Bibliotheken und mit gleicher Version neu gebaute Pakete, daher mehr als in der Liste. Der Platz kommt zum aktuellen System hinzu, bis alte Generationen aufgeräumt sind.",
+    "estimate_left": "noch etwa {seconds} s, gemessen an der letzten Schätzung",
+    "estimate_left_guess": "noch etwa {seconds} s, grob geschätzt vor der ersten Messung",
+    "estimate_longer": "dauert länger als beim letzten Mal",
+    "estimate_running": "Ermittle Download-Größe … {seconds} s",
     "flatpak": "Flatpak-Updates: {count}",
     "inputs": "Flake-Inputs mit neuen Commits: {count}",
     "more_updates": "{hidden} weitere · alle {count} Updates anzeigen",

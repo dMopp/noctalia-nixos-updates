@@ -14,8 +14,7 @@
 # packages-old.json / packages-new.json (name and version of every
 # environment.systemPackages entry, the kernel and the home.packages of Home
 # Manager users, with changelog and homepage), home-old.json / home-new.json
-# (the same for a standalone Home Manager configuration), dry-run.txt (what
-# nix build --dry-run says the new system needs), flatpak-installed.tsv,
+# (the same for a standalone Home Manager configuration), flatpak-installed.tsv,
 # flatpak-updates.tsv (installation, application, branch, new version).
 
 set -u
@@ -32,52 +31,11 @@ token=""
 err="$out/stderr"
 rc=0
 
-# Every nix and flatpak call has a time limit, so the script ends on its own:
-# the service cannot stop a stream it started. Worst case 10 (update) + 2 * 10
-# (system) + 10 (dry run) + 2 * 10 (Home Manager) + 3 * 3 (Flatpak) = 69
-# minutes, plus 30 seconds per call for timeout -k to kill what ignores the
-# TERM: 74 minutes; the service waits longer than that before it gives a run up.
-# No stdin, so nothing can wait for an answer.
-limit() {
-	minutes=$1
-	shift
-	timeout -k 30 "${minutes}m" "$@" </dev/null
-	rc=$?
-	return "$rc"
-}
-
-# The updated lock points at code the user has not accepted yet, and it is
-# evaluated in the background. So settings that would widen what that code can
-# do are off here, whatever nix.conf says: no nixConfig from the flake, no
-# builtins.exec. max-jobs 0 without builders: nothing is built; a build the
-# evaluation asks for (import from derivation) only comes from a binary cache,
-# else the evaluation fails with an error.
-run_nix() {
-	minutes=$1
-	shift
-	limit "$minutes" nix \
-		--extra-experimental-features nix-command \
-		--extra-experimental-features flakes \
-		--option accept-flake-config false \
-		--option allow-unsafe-native-code-during-evaluation false \
-		--option max-jobs 0 \
-		--option builders "" \
-		"$@"
-}
-
-# One line for the service, without control characters and cut to a length the
-# stream takes: Nix's last error line, as Nix ends an error with a code frame
-# that says little alone, else the last stderr lines. Output of a failed command
-# stays in $err, only this line reaches the protocol.
-fail() {
-	if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
-		printf 'fail %s timed out\n' "$1"
-		return
-	fi
-	message=$(grep 'error: *[^ ]' "$err" | tail -n 1)
-	[ -n "$message" ] || message=$(grep -v '^warning:' "$err" | tail -n 3)
-	printf 'fail %s %s\n' "$1" "$(printf '%s\n' "$message" | tr '\n\t' '  ' | tr -d '\000-\037\177' | cut -c1-500)"
-}
+# Worst case 10 (update) + 2 * 10 (system) + 2 * 10 (Home Manager) + 3 * 3
+# (Flatpak) = 59 minutes, plus 30 seconds per call for timeout -k to kill what
+# ignores the TERM: 63 minutes; the service waits longer before it gives a run
+# up.
+. "$(dirname "$0")/lib.sh"
 
 # Reads the optional GitHub token, refusing anything that could leak it or
 # smuggle in settings: it must be the user's own file, readable by nobody else,
@@ -210,7 +168,7 @@ if [ -n "$dir" ]; then
 	echo "step lock"
 	load_token
 	rm -f "$out/new.lock" "$out/packages-old.json" "$out/packages-new.json" \
-		"$out/home-old.json" "$out/home-new.json" "$out/dry-run.txt"
+		"$out/home-old.json" "$out/home-new.json"
 	if [ ! -f "$dir/flake.lock" ]; then
 		echo "fail lock no-lock"
 	elif ! update_lock; then
@@ -227,17 +185,7 @@ if [ -n "$dir" ]; then
 			cp "$out/packages-old.json" "$out/packages-new.json"
 		else
 			echo "step eval-new"
-			if ! evaluate "$out/new.lock" "$out/packages-new.json"; then
-				fail eval-new
-			else
-				# What the new system needs that is not in the store yet: paths to
-				# download with their sizes, derivations to build. Nothing is built;
-				# Nix asks the binary caches which paths they have.
-				echo "step size"
-				run_nix 10 build --dry-run --no-link --no-write-lock-file --reference-lock-file "$out/new.lock" \
-					"$dir#nixosConfigurations.\"$cfg\".config.system.build.toplevel" >/dev/null 2>"$out/dry-run.txt" ||
-					{ cp "$out/dry-run.txt" "$err"; rm -f "$out/dry-run.txt"; fail size; }
-			fi
+			evaluate "$out/new.lock" "$out/packages-new.json" || fail eval-new
 		fi
 		if [ -n "$home" ]; then
 			echo "step home"
