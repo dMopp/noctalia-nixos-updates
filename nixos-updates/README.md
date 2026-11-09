@@ -243,6 +243,22 @@ Starting the system services asks for your password through polkit, in the
 terminal or your polkit agent. The terminal stays open with a summary until you
 press Enter.
 
+**Which generations it deletes is never the plugin's decision.** It does not
+run `nix-collect-garbage -d` or `--delete-older-than` with an age of its own:
+`-d` would delete every old generation at once, including the ones you keep to
+roll back to after a bad update. With `nix.gc.automatic` your own
+`nix.gc.options` decide, so pressing the button deletes what the next automatic
+run would delete anyway, just earlier. Without it no generation is deleted at
+all. To have old generations removed, configure that in NixOS, for example:
+
+```nix
+nix.gc = {
+  automatic = true;
+  dates = "weekly";
+  options = "--delete-older-than 14d";
+};
+```
+
 ## IPC
 
 ```sh
