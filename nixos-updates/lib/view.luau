@@ -92,8 +92,9 @@ function M.openUrl(url)
 	end
 end
 
--- Check now plus Update (or a shortcut to the settings when no update
--- command is set), for the bottom of both panels.
+-- Check now, Clean up unless turned off, and Update (or a
+-- shortcut to the settings when no update command is set), for the bottom of
+-- both panels.
 function M.actions(result, onUpdate)
 	local buttons = {
 		ui.button({
@@ -108,6 +109,19 @@ function M.actions(result, onUpdate)
 		}),
 		ui.box({ flexGrow = 1, height = 1, fill = "on_surface/0" }),
 	}
+	if result.hasCleanupButton then
+		table.insert(buttons, ui.button({
+			text = noctalia.tr("panel.cleanup"),
+			glyph = "trash",
+			variant = "ghost",
+			controlSize = "sm",
+			tooltip = noctalia.tr("panel.cleanup_hint"),
+			onClick = function()
+				M.send("cleanup")
+				onUpdate()
+			end,
+		}))
+	end
 	if result.hasUpdateCommand then
 		table.insert(buttons, ui.button({
 			text = noctalia.tr("panel.update"),

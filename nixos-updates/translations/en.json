@@ -48,9 +48,12 @@
   },
   "panel": {
     "added": "new: {version}",
+    "check_incomplete": "Check did not complete · tried {time}",
     "check_now": "Check now",
     "checking": "Checking for updates…",
     "checking_step": "Checking for updates: {step}…",
+    "cleanup": "Clean up",
+    "cleanup_hint": "Removes what nothing needs any more, following your system's own cleanup rules. Runs in a terminal and asks for your password.",
     "flatpak": "Flatpak updates: {count}",
     "inputs": "Flake inputs with new commits: {count}",
     "more_updates": "{hidden} more · show all {count} updates",
@@ -68,7 +71,6 @@
     "set_update_command": "Set update command",
     "title": "NixOS Updates",
     "up_to_date": "Everything is up to date · checked {time}",
-    "check_incomplete": "Check did not complete · tried {time}",
     "update": "Update"
   },
   "settings": {
@@ -83,6 +85,10 @@
     "check_packages": {
       "description": "Evaluate the NixOS configuration with the current and the updated lock and list the package versions that change. This evaluates the code of input revisions you have not accepted yet; nothing is built. Takes a few seconds of CPU per check, longer when a new nixpkgs has to be downloaded.",
       "label": "Compare package versions"
+    },
+    "cleanup_button": {
+      "label": "Clean up button",
+      "description": "Shows a Clean up button in the panel. It runs the system's own Nix cleanup (nix-gc.service and nix-optimise.service where NixOS has them, else only unused store paths, no generations) and removes unused Flatpak runtimes, in a terminal."
     },
     "flake_dir": {
       "description": "Directory with flake.nix and flake.lock, as an absolute path. Not written to; the updated lock goes to the plugin's data directory. Empty: only Flatpaks.",

@@ -26,6 +26,8 @@ the panel's **Update** button.
   `readlink`, `rm`, `sed`, `stat`, `tail`, `tr` (a shell, coreutils, diffutils,
   grep, sed).
 - Optional: `flatpak` for the Flatpak list; without it that section is left out.
+- `systemd-run` for the update process scope (part of any systemd-based Linux installation).
+- `systemctl`, `journalctl` and `nix-collect-garbage` for the **Clean up** button (systemd and Nix).
 - Optional: `xdg-open` to open changelogs and commit comparisons from the panels.
 
 ## Usage
@@ -53,7 +55,7 @@ Left-click the widget for the panel:
   version (runtimes without a version show "new build").
 - **Flake inputs with new commits**: old and new revision, source and commit
   dates.
-- **Check now** and **Update**.
+- **Check now**, **Clean up** (see [Cleaning up](#cleaning-up)) and **Update**.
 
 Packages and Flatpaks come first, the inputs after.
 The compact panel shows at most eight rows in all; where it cuts the list, one
@@ -102,7 +104,8 @@ Plugin settings:
 | `check_flatpak` | `bool` | `true` | List pending Flatpak updates of the system and user installations. |
 | `check_interval_hours` | `int` | `6` | Hours between two checks (1-168). After a failed check at most 15 minutes. |
 | `update_command` | `string` | `""` | Shell command for the **Update** button, run in a terminal when you press it, never on its own. Empty: the button opens the settings instead. |
-| `terminal` | `string` | `""` | Terminal command the **Update** button starts the update command with, e.g. `kitty --class nixos-updates -e`. Include the option your terminal needs to run a command. Give it its own window class or app id, then match that in a compositor window rule to float it without affecting other terminals. Empty: Noctalia's default terminal. |
+| `cleanup_button` | `bool` | `true` | Show the **Clean up** button, see [Cleaning up](#cleaning-up). |
+| `terminal` | `string` | `""` | Terminal command the **Update** and **Clean up** buttons start their command with, e.g. `kitty --class nixos-updates -e`. Include the option your terminal needs to run a command. Give it its own window class or app id, then match that in a compositor window rule to float it without affecting other terminals. Empty: Noctalia's default terminal. |
 | `github_token_file` | `file` | `""` | Optional. Path to a file with a GitHub token, see [GitHub rate limit](#github-rate-limit). The token itself never goes into the settings. |
 | `notify` | `bool` | `true` | Notify when a check finds updates that were not pending before. |
 | `ignored_inputs` | `string_list` | `[]` | Advanced. Input names left out of the input list. Packages they change are still listed. |
@@ -188,11 +191,34 @@ inside the flake: those end up in the Nix store, which every user can read.
 - Nix sends it only to `github.com` and its API. It is not written to the plugin's
   files, not logged, and not sent anywhere by the plugin itself.
 
+## Cleaning up
+
+The **Clean up** button (setting `cleanup_button`, on by default) runs the
+plugin's `scripts/cleanup.sh` in a terminal, only when you press it. It removes
+only what nothing needs any more and follows your system's own cleanup rules
+where there are some:
+
+- **Nix store:** if NixOS cleans up on its own (`nix.gc.automatic`), the button
+  starts that very service, `nix-gc.service`, so the rules from your
+  configuration apply, such as `nix.gc.options = "--delete-older-than 14d"`.
+  That removes old generations, and with them boot entries you could roll back
+  to, exactly as the automatic run does. Without the service it runs only
+  `nix-collect-garbage`, which deletes unused store paths but no generations.
+- **Store optimisation:** `nix-optimise.service`, if `nix.optimise.automatic`
+  created it.
+- **Flatpak:** `flatpak uninstall --unused --noninteractive`, runtimes and
+  extensions no installed app uses.
+
+Starting the system services asks for your password through polkit, in the
+terminal or your polkit agent. The terminal stays open with a summary until you
+press Enter.
+
 ## IPC
 
 ```sh
 noctalia msg plugin dmopp/nixos-updates:service all check    # check now
 noctalia msg plugin dmopp/nixos-updates:service all update   # run the update command in a terminal
+noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup in a terminal
 ```
 
 ## Notes
@@ -252,8 +278,12 @@ noctalia msg plugin dmopp/nixos-updates:service all update   # run the update co
   `~/.cache/nix`.
 - **Processes:** `sh scripts/check.sh` (with the `nix` and `flatpak` calls
   above), `xdg-open <url>` on a click on a row with a changes link, and the
-  configured update command in a terminal on **Update** (with `terminal` set,
-  `<terminal> sh -lc '<update_command>'`).
+  configured update command on **Update** and `sh scripts/cleanup.sh` on
+  **Clean up**, each in a terminal (with `terminal` set,
+  `systemd-run --user --scope --collect --quiet <terminal> sh -lc '<command>'`).
+  The cleanup script runs `systemctl start nix-gc.service` /
+  `nix-optimise.service` or `nix-collect-garbage`, `journalctl` (to show what was
+  freed) and `flatpak uninstall --unused`.
 - Only packages listed in `environment.systemPackages` (and the kernel) are
   compared, not their dependencies or services. Home Manager packages are not
   included. A package built from an input can get new commits without a new

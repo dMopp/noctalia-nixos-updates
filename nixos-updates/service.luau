@@ -101,6 +101,7 @@ local function publish()
 	result.step = step
 	result.count = diff.pendingCount(result)
 	result.hasUpdateCommand = noctalia.string.trim(tostring(config("update_command", ""))) ~= ""
+	result.hasCleanupButton = config("cleanup_button", true) == true
 	noctalia.state.set(RESULT_KEY, result)
 end
 
@@ -290,12 +291,9 @@ local function check()
 	end
 end
 
-local function runUpdate()
-	local cmd = noctalia.string.trim(tostring(config("update_command", "")))
-	if cmd == "" then
-		noctalia.openSettings()
-		return
-	end
+-- Runs a command in a terminal, where the user sees it and can answer a
+-- password prompt.
+local function runInTerminal(cmd)
 	local terminal = noctalia.string.trim(tostring(config("terminal", "")))
 	if terminal == "" then
 		noctalia.runInTerminal(cmd)
@@ -303,6 +301,27 @@ local function runUpdate()
 	end
 	-- Not runInTerminal: that would open Noctalia's terminal around this one.
 	noctalia.runAsync(diff.terminalCommand(terminal, cmd))
+end
+
+-- The update command from the settings; without one, the settings, so the
+-- user can set one.
+local function runUpdate()
+	local cmd = noctalia.string.trim(tostring(config("update_command", "")))
+	if cmd == "" then
+		noctalia.openSettings()
+		return
+	end
+	runInTerminal(cmd)
+end
+
+-- The plugin's own cleanup script, the same on every system (see its header).
+-- Nothing to check afterwards: it removes only what nothing uses, the pending
+-- updates stay the same.
+local function runCleanup()
+	local pluginDir = noctalia.pluginDir()
+	if pluginDir ~= nil and config("cleanup_button", true) == true then
+		runInTerminal("sh " .. quote(pluginDir .. "/scripts/cleanup.sh"))
+	end
 end
 
 local function offline()
@@ -317,6 +336,8 @@ noctalia.state.watch(COMMAND_KEY, function(cmd)
 		check()
 	elseif cmd.action == "update" then
 		runUpdate()
+	elseif cmd.action == "cleanup" then
+		runCleanup()
 	end
 end)
 
@@ -325,6 +346,8 @@ function onIpc(event, _payload)
 		check()
 	elseif event == "update" then
 		runUpdate()
+	elseif event == "cleanup" then
+		runCleanup()
 	end
 end
 

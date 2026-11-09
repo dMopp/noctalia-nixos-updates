@@ -48,9 +48,12 @@
   },
   "panel": {
     "added": "neu: {version}",
+    "check_incomplete": "Prüfung nicht abgeschlossen · versucht {time}",
     "check_now": "Jetzt prüfen",
     "checking": "Suche nach Updates …",
     "checking_step": "Suche nach Updates: {step} …",
+    "cleanup": "Aufräumen",
+    "cleanup_hint": "Entfernt, was nichts mehr braucht, nach den Aufräum-Regeln deines Systems. Läuft in einem Terminal und fragt nach deinem Passwort.",
     "flatpak": "Flatpak-Updates: {count}",
     "inputs": "Flake-Inputs mit neuen Commits: {count}",
     "more_updates": "{hidden} weitere · alle {count} Updates anzeigen",
@@ -68,7 +71,6 @@
     "set_update_command": "Update-Befehl festlegen",
     "title": "NixOS-Updates",
     "up_to_date": "Alles aktuell · geprüft {time}",
-    "check_incomplete": "Prüfung nicht abgeschlossen · versucht {time}",
     "update": "Aktualisieren"
   },
   "settings": {
@@ -83,6 +85,10 @@
     "check_packages": {
       "description": "Die NixOS-Konfiguration mit der aktuellen und der aktualisierten Lock-Datei auswerten und die Paketversionen auflisten, die sich ändern. Dabei wird Code von Input-Ständen ausgewertet, die du noch nicht übernommen hast; gebaut wird nichts. Kostet pro Prüfung ein paar Sekunden CPU, länger wenn ein neues nixpkgs geladen werden muss.",
       "label": "Paketversionen vergleichen"
+    },
+    "cleanup_button": {
+      "label": "Aufräumen-Knopf",
+      "description": "Zeigt einen Aufräumen-Knopf im Panel. Er startet das Nix-Aufräumen des Systems (nix-gc.service und nix-optimise.service, wo NixOS sie hat, sonst nur unbenutzte Store-Pfade, keine Generationen) und entfernt unbenutzte Flatpak-Runtimes, in einem Terminal."
     },
     "flake_dir": {
       "description": "Verzeichnis mit flake.nix und flake.lock, als absoluter Pfad. Wird nicht beschrieben; die aktualisierte Lock-Datei landet im Datenverzeichnis des Plugins. Leer: nur Flatpaks.",
