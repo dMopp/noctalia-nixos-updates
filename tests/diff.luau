@@ -164,4 +164,31 @@ check("pending without flatpak", diff.pendingCount({ packages = {}, inputs = { 1
 check("pending only inputs", diff.pendingCount({ inputs = { 1 } }), 1)
 check("pending nothing", diff.pendingCount({}), 0)
 
+-- dry run
+local e = diff.dryRun("these 19 derivations will be built:\n  /nix/store/a.drv\nthese 1877 paths will be fetched (1.21 GiB download, 4.50 GiB unpacked):\n  /nix/store/b\n")
+check("dry build", e.build, 19)
+check("dry fetch", e.fetch, 1877)
+check("dry download", e.download, "1.21 GiB")
+check("dry unpacked", e.unpacked, "4.50 GiB")
+e = diff.dryRun("this derivation will be built:\n  /nix/store/a.drv\nthis path will be fetched (74.2 KiB download, 273.0 KiB unpacked):\n")
+check("dry singular", e.build .. "/" .. e.fetch .. "/" .. e.download, "1/1/74.2 KiB")
+check("dry nothing to do", diff.dryRun("") , nil)
+e = diff.dryRun("warning: Git tree is dirty\n")
+check("dry up to date", e.build + e.fetch, 0)
+check("dry unknown format", diff.dryRun("these many things will be done\n"), nil)
+e = diff.dryRun("these 2 paths will be fetched (1 GiB; rm -rf download, x unpacked):\n")
+check("dry odd size dropped", e and e.download, "")
+
+-- reboot
+check("no reboot", diff.reboot({ "a", "a", "b", "b", "c", "c" }), nil)
+local r = diff.reboot({ "/nix/store/x-linux-7.3.1/bzImage", "/nix/store/y-linux-7.3.2/bzImage", "i", "j", "m", "n" })
+check("reboot kernels", r.running .. ">" .. r.installed, "7.3.1>7.3.2")
+r = diff.reboot({ "k", "k", "/nix/store/i1-initrd", "/nix/store/i2-initrd", "m", "m" })
+check("reboot initrd only", r.running .. "|" .. r.installed, "|")
+check("reboot bad input", diff.reboot({ "a" }), nil)
+
+-- concat
+check("concat", #diff.concat({ 1, 2 }, { 3 }), 3)
+check("concat missing", #diff.concat(nil, { 3 }), 1)
+
 print(failed == 0 and "all tests passed" or (tostring(failed) .. " failed"))

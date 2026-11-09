@@ -10,6 +10,7 @@ local OLD_WIDTH = 190
 local NEW_WIDTH = 190
 
 local result = noctalia.state.get(view.RESULT_KEY) or {}
+local system = noctalia.state.get(view.SYSTEM_KEY) or {}
 local query = ""
 local filter = "all"
 
@@ -213,6 +214,7 @@ function render()
 			ui.column({ flexGrow = 1, gap = 2 }, {
 				ui.label({ text = noctalia.tr("panel.title"), fontSize = 17, fontWeight = "bold", color = "on_surface" }),
 				ui.label({ text = view.status(result), fontSize = 12, color = "on_surface_variant" }),
+				ui.column({ gap = 2 }, view.noteRows(view.notes(result, system))),
 			}),
 			ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
 		}),
@@ -232,6 +234,7 @@ function render()
 			ui.row({ gap = 4 }, filters),
 		}),
 		ui.scroll({ flexGrow = 1, gap = 8 }, body),
+		view.storage(system) ~= nil and ui.label({ text = view.storage(system), fontSize = 11, color = "on_surface_variant", maxLines = 1 }) or nil,
 		ui.row({ align = "center", gap = 8 }, view.actions(result, function()
 			panel.close()
 		end)),
@@ -241,6 +244,13 @@ end
 noctalia.state.watch(view.RESULT_KEY, function(value)
 	if type(value) == "table" then
 		result = value
+		render()
+	end
+end)
+
+noctalia.state.watch(view.SYSTEM_KEY, function(value)
+	if type(value) == "table" then
+		system = value
 		render()
 	end
 end)

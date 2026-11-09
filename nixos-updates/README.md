@@ -28,6 +28,7 @@ the panel's **Update** button.
 - Optional: `flatpak` for the Flatpak list; without it that section is left out.
 - `systemd-run` for the update process scope (part of any systemd-based Linux installation).
 - `systemctl`, `journalctl` and `nix-collect-garbage` for the **Clean up** button (systemd and Nix).
+- `df` for the free space of the Nix store (coreutils).
 - Optional: `xdg-open` to open changelogs and commit comparisons from the panels.
 
 ## Usage
@@ -48,14 +49,38 @@ configuration alone does not; it shows with the next check or **Check now**.
 
 Left-click the widget for the panel:
 
-- **Package changes**: every entry of `environment.systemPackages` plus the
-  kernel whose version changes, appears or disappears. Packages are told apart
-  by name, so a renamed one shows up as removed plus new.
+- **Package changes**: every entry of `environment.systemPackages`, the kernel
+  and the packages of Home Manager users (see below) whose version changes,
+  appears or disappears. Packages are told apart by name, so a renamed one shows
+  up as removed plus new.
 - **Flatpak updates**: system and user installation, installed and new
   version (runtimes without a version show "new build").
 - **Flake inputs with new commits**: old and new revision, source and commit
   dates.
 - **Check now**, **Clean up** (see [Cleaning up](#cleaning-up)) and **Update**.
+
+Above the lists, when they apply:
+
+- **Restart needed**: the running kernel, initrd or kernel modules are not the
+  ones of the current system, so the last update takes full effect only after a
+  restart. Read from `/run/booted-system` and `/run/current-system` once a
+  minute; the widget turns into a badge with a restart glyph when nothing else
+  is pending.
+- **Download estimate**: what the updated system needs that is not in the Nix
+  store yet, from `nix build --dry-run`: store paths to download with download
+  and unpacked size, and derivations to build. It counts every store path,
+  libraries and packages rebuilt with an unchanged version included, so it is
+  much higher than the list, which shows versions like `apt list --upgradable`.
+  The unpacked size is used on top of the current system until old generations
+  are cleaned up.
+
+Below the lists: free space of the file system holding `/nix/store` and the
+number of system generations.
+
+Home Manager: as a NixOS module, the `home.packages` of all its users are part
+of the package list without any setting. A standalone configuration in the same
+flake (`homeConfigurations.<name>`) is compared too when you set
+`home_configuration`.
 
 Packages and Flatpaks come first, the inputs after.
 The compact panel shows at most eight rows in all; where it cuts the list, one
@@ -100,7 +125,8 @@ Plugin settings:
 | --- | --- | --- | --- |
 | `flake_dir` | `folder` | `/etc/nixos` | Directory with `flake.nix` and `flake.lock`, as an absolute path without `?` or `#`. Not written to. Empty: only Flatpaks. |
 | `nixos_configuration` | `string` | `""` | Attribute under `nixosConfigurations` to evaluate. Empty: the hostname. |
-| `check_packages` | `bool` | `true` | Evaluate the configuration with the current and the updated lock and compare package versions. |
+| `check_packages` | `bool` | `true` | Evaluate the configuration with the current and the updated lock and compare package versions; also estimates the download. |
+| `home_configuration` | `string` | `""` | Advanced. Name under `homeConfigurations` of a standalone Home Manager configuration in the same flake, compared too. Not needed for Home Manager as a NixOS module. |
 | `check_flatpak` | `bool` | `true` | List pending Flatpak updates of the system and user installations. |
 | `check_interval_hours` | `int` | `6` | Hours between two checks (1-168). After a failed check at most 15 minutes. |
 | `update_command` | `string` | `""` | Shell command for the **Update** button, run in a terminal when you press it, never on its own. Empty: the button opens the settings instead. |
@@ -234,7 +260,13 @@ noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup i
      with `flake.lock` and once with `new.lock`, both with the configuration as
      it is at that moment, so that an edit of the configuration does not look
      like an update. When both locks are equal the second evaluation is skipped.
-  3. `flatpak list` (with origin, for the Flathub link) and
+     The NixOS module of Home Manager adds `home.packages` of its users; with
+     `home_configuration` the same runs for
+     `homeConfigurations."<name>".config.home.packages`.
+  3. Only when the locks differ: `nix build --dry-run --no-link … '<flake_dir>#nixosConfigurations."<name>".config.system.build.toplevel'`
+     with `new.lock`, for the download estimate. Nothing is built; Nix asks the
+     binary caches which store paths they have.
+  4. `flatpak list` (with origin, for the Flathub link) and
      `flatpak remote-ls --system|--user --updates`.
 
   Every `nix` and `flatpak` call runs under `timeout` (10 minutes for the
@@ -258,8 +290,9 @@ noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup i
   URL are not shown.
 - **Network:** `nix` fetches the inputs' latest revisions (and, on the first
   evaluation of a new revision, its source) like `nix flake update` does, using
-  your flake registry and binary caches; `flatpak remote-ls` fetches the remotes'
-  metadata. The plugin itself makes no HTTP requests. Automatic checks pause
+  your flake registry and binary caches; the dry run asks the binary caches
+  about the missing store paths (one small request each); `flatpak remote-ls`
+  fetches the remotes' metadata. The plugin itself makes no HTTP requests. Automatic checks pause
   while `shell.offline_mode` is on; **Check now** and the IPC command still run.
 - **CPU:** an evaluation of the NixOS configuration takes a few seconds to a
   minute, depending on the configuration; Nix's own caches make it much
@@ -270,7 +303,7 @@ noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup i
   time only).
 - **Files written:** by the plugin only in its data directory
   (`noctalia.pluginDataDir()`, owner only): `new.lock`, `packages-old.json`,
-  `packages-new.json`, `flatpak-installed.tsv`, `flatpak-updates.tsv`, `stderr`
+  `packages-new.json`, `home-old.json`, `home-new.json`, `dry-run.txt`, `flatpak-installed.tsv`, `flatpak-updates.tsv`, `stderr`
   during a run, and `result.json` with the last result. `nix` also does what
   every flake command does: it copies `<flake_dir>` to the world-readable Nix
   store (for a Git repository only tracked files, otherwise the whole directory),
@@ -283,8 +316,11 @@ noctalia msg plugin dmopp/nixos-updates:service all cleanup  # run the cleanup i
   `systemd-run --user --scope --collect --quiet <terminal> sh -lc '<command>'`).
   The cleanup script runs `systemctl start nix-gc.service` /
   `nix-optimise.service` or `nix-collect-garbage`, `journalctl` (to show what was
-  freed) and `flatpak uninstall --unused`.
-- Only packages listed in `environment.systemPackages` (and the kernel) are
-  compared, not their dependencies or services. Home Manager packages are not
-  included. A package built from an input can get new commits without a new
+  freed) and `flatpak uninstall --unused`. Once a minute `df` on `/nix/store` and
+  `readlink -f` on the kernel, initrd and kernel-modules links of
+  `/run/booted-system` and `/run/current-system`; `/nix/var/nix/profiles` is
+  listed to count system generations.
+- Only packages listed in `environment.systemPackages`, the kernel and Home
+  Manager's `home.packages` are compared, not their dependencies or services;
+  the download estimate covers those. A package built from an input can get new commits without a new
   version number; then only the input is listed.

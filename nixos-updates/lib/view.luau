@@ -8,6 +8,7 @@ local M = {}
 M.RESULT_KEY = "nixos_updates"
 M.COMMAND_KEY = "nixos_updates_command"
 M.DETAILS_ID = "dmopp/nixos-updates:details"
+M.SYSTEM_KEY = "nixos_updates_system"
 
 function M.send(action)
 	noctalia.state.set(M.COMMAND_KEY, { action = action, nonce = tostring(noctalia.nowMs()) })
@@ -90,6 +91,74 @@ function M.openUrl(url)
 	if not accepted then
 		noctalia.notifyError(noctalia.tr("errors.open_failed"), url)
 	end
+end
+
+-- Bytes as Nix and df users read them: "1.2 GiB".
+function M.bytes(n)
+	n = tonumber(n) or 0
+	local units = { "B", "KiB", "MiB", "GiB", "TiB" }
+	local i = 1
+	while n >= 1024 and i < #units do
+		n /= 1024
+		i += 1
+	end
+	return string.format(i == 1 and "%d %s" or "%.1f %s", n, units[i])
+end
+
+-- Lines under the status: a restart that is due, and what the update would
+-- download and build. Each { glyph, text, color, tooltip }.
+function M.notes(result, system)
+	local notes = {}
+	local reboot = type(system) == "table" and system.reboot or nil
+	if type(reboot) == "table" then
+		local text = noctalia.tr("panel.reboot")
+		if reboot.installed ~= "" and reboot.running ~= "" and reboot.installed ~= reboot.running then
+			text = noctalia.tr("panel.reboot_kernel", { installed = reboot.installed, running = reboot.running })
+		end
+		table.insert(notes, { glyph = "refresh-alert", text = text, color = "error", tooltip = noctalia.tr("panel.reboot_hint") })
+	end
+	local estimate = result.estimate
+	if type(estimate) == "table" and (tonumber(result.count) or 0) > 0 then
+		local parts = {}
+		if (tonumber(estimate.fetch) or 0) > 0 then
+			table.insert(parts, noctalia.trp("panel.estimate_fetch", estimate.fetch, { download = estimate.download, unpacked = estimate.unpacked }))
+		end
+		if (tonumber(estimate.build) or 0) > 0 then
+			table.insert(parts, noctalia.trp("panel.estimate_build", estimate.build))
+		end
+		if #parts > 0 then
+			table.insert(notes, {
+				glyph = "cloud-download",
+				text = table.concat(parts, " · "),
+				color = "on_surface_variant",
+				tooltip = noctalia.tr("panel.estimate_hint"),
+			})
+		end
+	end
+	return notes
+end
+
+function M.noteRows(notes)
+	local rows = {}
+	for i, note in ipairs(notes) do
+		table.insert(rows, ui.row({ key = "note-" .. i, align = "center", gap = 8, tooltip = note.tooltip }, {
+			ui.glyph({ name = note.glyph, size = 14, color = note.color }),
+			ui.label({ text = note.text, fontSize = 12, color = note.color, flexGrow = 1, maxLines = 2 }),
+		}))
+	end
+	return rows
+end
+
+-- "Nix store: 1.0 TiB free of 1.8 TiB · 91 system generations", or nil.
+function M.storage(system)
+	if type(system) ~= "table" or system.size == nil then
+		return nil
+	end
+	return noctalia.tr("panel.storage", {
+		free = M.bytes(system.free),
+		size = M.bytes(system.size),
+		generations = tostring(system.generations or 0),
+	})
 end
 
 -- Check now, Clean up unless turned off, and Update (or a

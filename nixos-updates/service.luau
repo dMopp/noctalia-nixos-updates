@@ -11,10 +11,11 @@
 local diff = require("./lib/diff.luau")
 
 local RESULT_KEY = "nixos_updates"
+local SYSTEM_KEY = "nixos_updates_system"
 local COMMAND_KEY = "nixos_updates_command"
 -- A check that has not finished after this long is given up (the stream has
 -- no exit callback, so a killed script would otherwise block every check).
--- Longer than check.sh can run (its nix and flatpak calls have time limits, 52
+-- Longer than check.sh can run (74 minutes at most) (its nix and flatpak calls have time limits, 52
 -- minutes in all), so no two runs overlap; plugins cannot stop a stream
 -- themselves.
 local STALE_RUN_S = 60 * 60
@@ -58,6 +59,10 @@ local function flakeDir()
 		return ""
 	end
 	return (noctalia.expandPath(dir):gsub("/+$", ""))
+end
+
+local function homeConfiguration()
+	return noctalia.string.trim(tostring(config("home_configuration", "")))
 end
 
 -- Only ever the path: the token stays in its file, and settings may be exported.
@@ -184,13 +189,23 @@ local function collect()
 		if config("check_packages", true) == true and not failed["eval-old"] and not failed["eval-new"] then
 			local oldPkgs = readJson(dir .. "/packages-old.json")
 			local newPkgs = readJson(dir .. "/packages-new.json")
+			-- A standalone Home Manager configuration counts as more packages;
+			-- if it failed, both sides go without it.
+			if homeConfiguration() ~= "" and not failed.home and oldPkgs ~= nil and newPkgs ~= nil then
+				oldPkgs = diff.concat(oldPkgs, readJson(dir .. "/home-old.json"))
+				newPkgs = diff.concat(newPkgs, readJson(dir .. "/home-new.json"))
+			end
 			if oldPkgs ~= nil and newPkgs ~= nil then
 				fresh.packages = diff.packages(oldPkgs, newPkgs)
 			end
 		end
 	end
+	if config("check_packages", true) == true and flakeDir() ~= "" and not failed.lock and not failed.size then
+		fresh.estimate = diff.dryRun(noctalia.readFile(dir .. "/dry-run.txt") or "")
+	end
 	if sameFlake and failed.lock then
 		fresh.inputs = previous.inputs
+		fresh.estimate = previous.estimate
 	end
 	if config("check_packages", true) == true and sameFlake and (failed.lock or failed["eval-old"] or failed["eval-new"]) then
 		fresh.packages = previous.packages
@@ -260,6 +275,7 @@ local function check()
 		config("check_packages", true) == true and "1" or "0",
 		config("check_flatpak", true) == true and "1" or "0",
 		quote(tokenFile()),
+		quote(homeConfiguration()),
 	}, " ")
 
 	running = true
@@ -355,7 +371,48 @@ end
 -- last check (then wait SETTLE_S for it to finish).
 noctalia.setUpdateInterval(60 * 1000)
 
+-- Restart and storage facts for the panel, cheap enough for every tick: the
+-- running and the current system's kernel, initrd and modules (NixOS keeps both
+-- under /run), free space of the store's file system, system generations.
+local BOOTED, CURRENT = "/run/booted-system/", "/run/current-system/"
+local function refreshSystem()
+	local generations = 0
+	local names = noctalia.listDir("/nix/var/nix/profiles")
+	for _, name in ipairs(type(names) == "table" and names or {}) do
+		if tostring(name):match("^system%-%d+%-link$") then
+			generations += 1
+		end
+	end
+	noctalia.runAsync({ "df", "-B1", "--output=avail,size", "/nix/store" }, function(df)
+		local free, size = tostring(df.stdout or ""):match("\n%s*(%d+)%s+(%d+)")
+		local links = {
+			BOOTED .. "kernel", CURRENT .. "kernel",
+			BOOTED .. "initrd", CURRENT .. "initrd",
+			BOOTED .. "kernel-modules", CURRENT .. "kernel-modules",
+		}
+		table.insert(links, 1, "-f")
+		table.insert(links, 1, "readlink")
+		noctalia.runAsync(links, function(r)
+			local reboot = nil
+			if r.exitCode == 0 then
+				local paths = {}
+				for line in tostring(r.stdout or ""):gmatch("[^\n]+") do
+					table.insert(paths, line)
+				end
+				reboot = diff.reboot(paths)
+			end
+			noctalia.state.set(SYSTEM_KEY, {
+				free = tonumber(free),
+				size = tonumber(size),
+				generations = generations,
+				reboot = reboot,
+			})
+		end)
+	end)
+end
+
 function update()
+	refreshSystem()
 	local now = os.time()
 	if running then
 		if now - runStarted > STALE_RUN_S then
@@ -397,3 +454,4 @@ if type(saved) == "table" then
 	result = saved
 end
 publish()
+refreshSystem()

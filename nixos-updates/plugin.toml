@@ -12,7 +12,7 @@ license = "MIT"
 icon = "snowflake"
 description = "Pending flake input, package and Flatpak updates on NixOS, like apt list --upgradable."
 tags = ["bar", "panel", "service", "system", "nixos", "indicator"]
-dependencies = ["nix", "sh", "timeout", "cat", "cmp", "cp", "cut", "grep", "head", "id", "mv", "readlink", "rm", "sed", "stat", "tail", "tr", "flatpak", "xdg-open", "systemd-run", "systemctl", "journalctl", "nix-collect-garbage"]
+dependencies = ["nix", "sh", "timeout", "cat", "cmp", "cp", "cut", "grep", "head", "id", "mv", "readlink", "rm", "sed", "stat", "tail", "tr", "flatpak", "xdg-open", "systemd-run", "systemctl", "journalctl", "nix-collect-garbage", "df"]
 
 [[setting]]
 key = "flake_dir"
@@ -34,6 +34,14 @@ type = "bool"
 label_key = "settings.check_packages.label"
 description_key = "settings.check_packages.description"
 default = true
+
+[[setting]]
+key = "home_configuration"
+type = "string"
+label_key = "settings.home_configuration.label"
+description_key = "settings.home_configuration.description"
+default = ""
+advanced = true
 
 [[setting]]
 key = "check_flatpak"

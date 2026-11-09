@@ -11,6 +11,7 @@ local view = require("./lib/view.luau")
 local PREVIEW = 8
 
 local result = noctalia.state.get(view.RESULT_KEY) or {}
+local system = noctalia.state.get(view.SYSTEM_KEY) or {}
 local expanded = { inputs = true, packages = true, flatpak = true }
 
 local function openDetails()
@@ -144,6 +145,10 @@ function render()
 		table.insert(body, ui.label({ text = view.status(result), fontSize = 12, color = "on_surface_variant" }))
 	end
 
+	for _, row in ipairs(view.noteRows(view.notes(result, system))) do
+		table.insert(body, row)
+	end
+
 	if result.checkedAt ~= nil and not empty then
 		local kinds = {
 			{ "packages", "package", "panel.packages", result.packages, packageRow },
@@ -187,6 +192,7 @@ function render()
 			ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
 		}),
 		ui.column({ gap = 10 }, body),
+		view.storage(system) ~= nil and ui.label({ text = view.storage(system), fontSize = 11, color = "on_surface_variant", maxLines = 1 }) or nil,
 		ui.row({ align = "center", gap = 8 }, view.actions(result, function()
 			panel.close()
 		end)),
@@ -196,6 +202,13 @@ end
 noctalia.state.watch(view.RESULT_KEY, function(value)
 	if type(value) == "table" then
 		result = value
+		render()
+	end
+end)
+
+noctalia.state.watch(view.SYSTEM_KEY, function(value)
+	if type(value) == "table" then
+		system = value
 		render()
 	end
 end)
