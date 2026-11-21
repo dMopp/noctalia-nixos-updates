@@ -31,6 +31,18 @@ run_nix() {
 		"$@"
 }
 
+# The flake reference for $dir. As a Git repository Nix sees only files Git
+# tracks; with $refmode = path, like nixos-rebuild --flake path:..., it sees and
+# copies to the store every file in the directory. The service only sets path
+# when the user turned that on.
+flake_ref() {
+	if [ "${refmode:-}" = path ]; then
+		printf 'path:%s' "$dir"
+	else
+		printf '%s' "$dir"
+	fi
+}
+
 # One line for the service, without control characters and cut to a length the
 # stream takes: Nix's last error line, as Nix ends an error with a code frame
 # that says little alone, else the last stderr lines. Output of a failed command
@@ -38,6 +50,13 @@ run_nix() {
 fail() {
 	if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
 		printf 'fail %s timed out\n' "$1"
+		return
+	fi
+	# A file the configuration imports but Git does not track: by code, with the
+	# file, so the service can point at the setting that fixes it.
+	untracked=$(sed -n "s/.*error: Path '\([^']*\)' in the repository .* is not tracked by Git.*/\1/p" "$err" | tail -n 1)
+	if [ -n "$untracked" ]; then
+		printf 'fail %s untracked %s\n' "$1" "$(printf '%s' "$untracked" | tr -d '\000-\037\177' | cut -c1-200)"
 		return
 	fi
 	message=$(grep 'error: *[^ ]' "$err" | tail -n 1)

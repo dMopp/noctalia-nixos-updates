@@ -38,7 +38,8 @@
     "token_in_flake": "Die Token-Datei liegt im Flake-Verzeichnis, von dort könnte Nix sie in den für alle lesbaren Store kopieren. Nicht verwendet: {path}",
     "token_missing": "Token-Datei nicht gefunden: {path}. Es wird ohne Token geprüft.",
     "token_mode": "Andere Benutzer könnten die Token-Datei lesen. Nicht verwendet, bis du chmod 600 darauf ausführst: {path}",
-    "token_owner": "Die Token-Datei gehört einem anderen Benutzer. Nicht verwendet: {path}"
+    "token_owner": "Die Token-Datei gehört einem anderen Benutzer. Nicht verwendet: {path}",
+    "untracked": "{file} wird nicht von Git verfolgt, und Nix liest ein Git-Repository nur mit verfolgten Dateien. Wenn du mit path: baust (nixos-rebuild --flake path:{dir}), schalte in den Einstellungen „Als path:-Flake auswerten“ ein; sonst nimm die Datei in Git auf."
   },
   "notify": {
     "body": {
@@ -110,6 +111,10 @@
     "cleanup_button": {
       "label": "Aufräumen-Knopf",
       "description": "Zeigt einen Aufräumen-Knopf im Panel. Er startet das Nix-Aufräumen des Systems (nix-gc.service und nix-optimise.service, wo NixOS sie hat, sonst nur unbenutzte Store-Pfade, keine Generationen) und entfernt unbenutzte Flatpak-Runtimes, in einem Terminal."
+    },
+    "flake_as_path": {
+      "label": "Als path:-Flake auswerten",
+      "description": "path:<Flake-Verzeichnis> statt des Git-Repositorys auswerten, wie nixos-rebuild --flake path:…. Nur wenn deine Konfiguration Dateien einbindet, die Git nicht verfolgt, und du sie ohnehin so baust: Nix kopiert dann jede Datei des Verzeichnisses, auch nicht verfolgte, in den für alle lesbaren Nix-Store."
     },
     "flake_dir": {
       "description": "Verzeichnis mit flake.nix und flake.lock, als absoluter Pfad. Wird nicht beschrieben; die aktualisierte Lock-Datei landet im Datenverzeichnis des Plugins. Leer: nur Flatpaks.",
