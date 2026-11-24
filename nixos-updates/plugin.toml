@@ -5,7 +5,7 @@
 
 id = "dmopp/nixos-updates"
 name = "NixOS Updates"
-version = "1.2.1"
+version = "1.2.2"
 plugin_api = 43
 author = "dMopp"
 license = "MIT"

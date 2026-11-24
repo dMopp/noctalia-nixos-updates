@@ -34,10 +34,12 @@ run_nix() {
 # The flake reference for $dir. As a Git repository Nix sees only files Git
 # tracks; with $refmode = path, like nixos-rebuild --flake path:..., it sees and
 # copies to the store every file in the directory. The service only sets path
-# when the user turned that on.
+# when the user turned that on. For path: the directory is resolved first: with
+# a symlink (/etc/nixos -> the repository elsewhere, say) Nix would copy the
+# link itself to the store and fail with "is a symlink".
 flake_ref() {
 	if [ "${refmode:-}" = path ]; then
-		printf 'path:%s' "$dir"
+		printf 'path:%s' "$(readlink -f -- "$dir" 2>/dev/null || printf '%s' "$dir")"
 	else
 		printf '%s' "$dir"
 	fi
