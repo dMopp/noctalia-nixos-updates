@@ -31,15 +31,23 @@ run_nix() {
 		"$@"
 }
 
+# $dir without symlinks, set once before any nix call. With /etc/nixos as a
+# link to the repository elsewhere, Nix refuses --reference-lock-file
+# /etc/nixos/flake.lock ("path ... (or its ancestor) is a symlink") and copies a
+# path: flake that is a link as the link itself ("... -source is a symlink").
+resolve_dir() {
+	[ -n "$dir" ] || return 0
+	resolved=$(readlink -f -- "$dir" 2>/dev/null) || return 0
+	[ -z "$resolved" ] || dir=$resolved
+}
+
 # The flake reference for $dir. As a Git repository Nix sees only files Git
 # tracks; with $refmode = path, like nixos-rebuild --flake path:..., it sees and
 # copies to the store every file in the directory. The service only sets path
-# when the user turned that on. For path: the directory is resolved first: with
-# a symlink (/etc/nixos -> the repository elsewhere, say) Nix would copy the
-# link itself to the store and fail with "is a symlink".
+# when the user turned that on.
 flake_ref() {
 	if [ "${refmode:-}" = path ]; then
-		printf 'path:%s' "$(readlink -f -- "$dir" 2>/dev/null || printf '%s' "$dir")"
+		printf 'path:%s' "$dir"
 	else
 		printf '%s' "$dir"
 	fi

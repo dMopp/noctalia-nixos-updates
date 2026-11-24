@@ -37,6 +37,7 @@ rc=0
 # ignores the TERM: 63 minutes; the service waits longer before it gives a run
 # up.
 . "$(dirname "$0")/lib.sh"
+resolve_dir
 
 # Reads the optional GitHub token, refusing anything that could leak it or
 # smuggle in settings: it must be the user's own file, readable by nobody else,

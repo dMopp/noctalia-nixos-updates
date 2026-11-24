@@ -21,6 +21,7 @@ err="$out/stderr-estimate"
 rc=0
 # 10 minutes plus 30 seconds for timeout -k; the service waits longer.
 . "$(dirname "$0")/lib.sh"
+resolve_dir
 
 [ -n "$cfg" ] || cfg=$(cat /proc/sys/kernel/hostname)
 rm -f "$out/dry-run.txt" "$out/estimate.lock"
